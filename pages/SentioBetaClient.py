@@ -325,6 +325,8 @@ class SentioBetaClient(BasePage):
         next_button.click()
 
     def continue_goal(self):
+        self.wait.until(expected_conditions.url_contains("/status"))
+        time.sleep(1)
         module_accordions = self.driver.find_elements(By.CSS_SELECTOR, "div.accordion-header")
 
         for module in module_accordions:
@@ -356,8 +358,9 @@ class SentioBetaClient(BasePage):
         assert self.wait_for_activity_content()
 
         toc = "Table of contents" if self.language == "en" else "Table des matières"
+        time.sleep(1)
         # toc_link = progress_container.find_element(By.LINK_TEXT, toc)
-        toc_link = self.wait.until(expected_conditions.presence_of_element_located(
+        toc_link = self.wait.until(expected_conditions.element_to_be_clickable(
             (By.LINK_TEXT, toc)
         ))
 
@@ -539,6 +542,7 @@ class SentioBetaClient(BasePage):
             )
             if submit_buttons:
                 self.wait.until(lambda d: submit_buttons[0].is_enabled())
+                time.sleep(1)
                 submit_buttons[0].click()
                 break
 
@@ -546,6 +550,7 @@ class SentioBetaClient(BasePage):
             next_buttons = step_container.find_elements(By.CSS_SELECTOR, ".btn-next")
             if next_buttons:
                 self.wait.until(lambda d: next_buttons[0].is_enabled())
+                time.sleep(1)
                 next_buttons[0].click()
             else:
                 break
