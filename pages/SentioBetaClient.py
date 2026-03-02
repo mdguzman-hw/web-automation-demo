@@ -266,9 +266,14 @@ class SentioBetaClient(BasePage):
         return [ModuleTile(module) for module in modules]
 
     def wait_for_activity_content(self):
-        return self.wait.until(
+        element = self.wait.until(
             expected_conditions.visibility_of_element_located((By.ID, "page-program-flow"))
         )
+
+        if "exercises/start" in self.driver.current_url:
+            self.setup_exercise()
+
+        return element
 
     def start_goal(self):
         # 1: Find continue button
@@ -288,9 +293,9 @@ class SentioBetaClient(BasePage):
         assert self.wait_for_activity_content()
 
         self.next_activity()
+        assert self.wait_for_activity_content()
 
     def next_activity(self):
-
         # 1: Find the next button container
         next_button_container = self.wait.until(
             expected_conditions.presence_of_element_located(
@@ -337,6 +342,10 @@ class SentioBetaClient(BasePage):
             old_url = self.driver.current_url
 
             self.next_activity()
+            assert self.wait_for_activity_content()
+
+            if self.driver.current_url.endswith("/input"):
+                return
 
             # Wait for the URL to change
             self.wait.until(expected_conditions.url_changes(old_url))
@@ -443,6 +452,42 @@ class SentioBetaClient(BasePage):
         )
 
         submit_button.click()
+
+    def setup_exercise(self):
+        text = "Setup Tasks" if self.language == "en" else "Tâches de configuration"
+
+        setup_button = self.wait.until(
+            expected_conditions.element_to_be_clickable(
+                (By.XPATH, f'//button[@type="submit" and normalize-space()="{text}"]')
+            )
+        )
+
+        setup_button.click()
+
+        assert "/exercises/" in self.driver.current_url
+        assert self.driver.current_url.endswith("/start")
+
+        self.start_exercise()
+
+    def start_exercise(self):
+        # Wait for the start task button
+        start_button = self.wait.until(
+            expected_conditions.element_to_be_clickable(
+                (By.CSS_SELECTOR, 'a.btn.btn-primary[href*="/exercises/"][href$="/input"]')
+            )
+        )
+
+        # Scroll into view (prevents click interception)
+        self.driver.execute_script(
+            "arguments[0].scrollIntoView({block: 'center'});",
+            start_button
+        )
+
+        start_button.click()
+
+        # Wait for navigation to input page
+        assert "/exercises/" in self.driver.current_url
+        assert self.driver.current_url.endswith("/input")
 
 
 class SentioLanding:

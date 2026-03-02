@@ -162,11 +162,19 @@ def test_bat_web_018(sentio_beta_client):
     assert sentio_beta_client.program_status_endpoint
 
     sentio_beta_client.continue_goal()
-
     sentio_beta_client.complete_goal()
 
 
-# TODO: BAT-WEB-019
+def test_bat_web_019(sentio_beta_client):
+    assert sentio_beta_client.program_status_endpoint
+
+    sentio_beta_client.continue_goal()
+    # Note: Will not entirely complete goal as the start_exercise() method will force a return and end the test
+    sentio_beta_client.complete_goal()
+
+    # BAT-WEB-019 is to test the exercise start only, so assert the URL once the return from complete_goal is received
+    assert sentio_beta_client.current_url.endswith("/input")
+
 # TODO: BAT-WEB-020
 # TODO: BAT-WEB-021
 # TODO: BAT-WEB-022
