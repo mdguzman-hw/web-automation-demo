@@ -180,6 +180,7 @@ def test_bat_web_019(sentio_beta_client):
     # BAT-WEB-019 is to test the exercise start only, so assert the URL once the return from complete_goal is received
     assert sentio_beta_client.current_url.endswith("/input")
 
+
 def test_bat_web_020(sentio_beta_client):
     assert sentio_beta_client._is_authenticated
     sentio_beta_client.navigate_dashboard()
@@ -193,19 +194,39 @@ def test_bat_web_020(sentio_beta_client):
 
 
 # TODO: BAT-WEB-021
+def test_bat_web_021(sentio_beta_client):
+    assert sentio_beta_client._is_authenticated
+    sentio_beta_client.navigate_dashboard()
+    assert sentio_beta_client.wait_for_dashboard()
+
+    in_progress_programs = sentio_beta_client.in_progress_programs()
+    assert in_progress_programs, "No in_progress programs available"
+
+    test_program = next(
+        p for p in in_progress_programs
+        if p.title == sentio_beta_client.programs["mental_health"]
+    )
+
+    sentio_beta_client.continue_activity(test_program.title)
+    sentio_beta_client.wait_for_activity_content()
+
+    sentio_beta_client.complete_exercise_series()
+    sentio_beta_client.next_activity()
+
+
 # TODO: BAT-WEB-022
 # TODO: BAT-WEB-023
 
-# def test_bat_web_024(sentio_beta_client):
-#     assert sentio_beta_client._is_authenticated
-#
-#     header = sentio_beta_client.header
-#     header_buttons = header.elements["buttons"]
-#
-#     # 4: Test - Menu dropdown
-#     header.click_element(By.CLASS_NAME, header_buttons["menu"])
-#     assert header.wait_for_account_menu(), "Menu not found"
-#
-#     # 5: Test - Logout
-#     header.click_element(By.CSS_SELECTOR, header_buttons["menu_sign_out"])
-#     assert sentio_beta_client.base_url in sentio_beta_client.current_url.lower()
+def test_bat_web_024(sentio_beta_client):
+    assert sentio_beta_client._is_authenticated
+
+    header = sentio_beta_client.header
+    header_buttons = header.elements["buttons"]
+
+    # 4: Test - Menu dropdown
+    header.click_element(By.CLASS_NAME, header_buttons["menu"])
+    assert header.wait_for_account_menu(), "Menu not found"
+
+    # 5: Test - Logout
+    header.click_element(By.CSS_SELECTOR, header_buttons["menu_sign_out"])
+    assert sentio_beta_client.base_url in sentio_beta_client.current_url.lower()

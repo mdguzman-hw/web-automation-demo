@@ -1,5 +1,6 @@
 import random
 import time
+from datetime import datetime
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions
@@ -483,6 +484,7 @@ class SentioBetaClient(BasePage):
             "arguments[0].scrollIntoView({block: 'center'});",
             start_button
         )
+        time.sleep(0.5)
 
         start_button.click()
 
@@ -497,6 +499,96 @@ class SentioBetaClient(BasePage):
             expected_conditions.visibility_of_element_located((By.ID, "container-page-vue"))
         )
 
+    def complete_exercise(self):
+        timestamp = datetime.now().strftime("%m-%d-%Y-%H%M%S")
+        base_text = f"TESTING-{timestamp}"
+
+        while not self.driver.current_url.endswith("/start"):
+            # Wait for any visible step
+            step_container = self.wait.until(
+                expected_conditions.visibility_of_element_located(
+                    (By.CSS_SELECTOR, ".container-question:not([style*='display: none'])")
+                )
+            )
+
+            # --- Extract example text dynamically ---
+            example_elements = step_container.find_elements(
+                By.CSS_SELECTOR, ".question-example .text-grey-dark"
+            )
+            example_text = example_elements[0].text.strip() if example_elements else ""
+
+            full_text = f"{base_text} {example_text}"
+
+            # --- Fill textarea if present ---
+            text_areas = step_container.find_elements(By.TAG_NAME, "textarea")
+            if text_areas:
+                textarea = text_areas[0]
+                textarea.clear()
+                textarea.send_keys(full_text)
+
+            # --- Click first checkbox if present ---
+            checkboxes = step_container.find_elements(By.CSS_SELECTOR, "input[type='checkbox']")
+            if checkboxes:
+                # Pick a random checkbox from the available ones
+                random_checkbox = random.choice(checkboxes)
+                random_checkbox.click()
+
+            # --- If Submit exists → click and break ---
+            submit_buttons = step_container.find_elements(
+                By.CSS_SELECTOR, "button[type='submit']"
+            )
+            if submit_buttons:
+                self.wait.until(lambda d: submit_buttons[0].is_enabled())
+                submit_buttons[0].click()
+                break
+
+            # --- Otherwise click Next ---
+            next_buttons = step_container.find_elements(By.CSS_SELECTOR, ".btn-next")
+            if next_buttons:
+                self.wait.until(lambda d: next_buttons[0].is_enabled())
+                next_buttons[0].click()
+            else:
+                break
+
+    def complete_exercise_series(self):
+        next_button_clickable = False
+        while not next_button_clickable:
+            self.start_exercise()
+            self.complete_exercise()
+
+            next_btn = self.wait.until(
+                lambda d: d.find_element(
+                    By.CSS_SELECTOR,
+                    ".container-program-progress .item-program-progress.next .item-inner"
+                )
+            )
+
+            # Determine if unlocked
+            next_button_clickable = (
+                    "locked" not in next_btn.get_attribute("class") and
+                    not next_btn.find_elements(By.CSS_SELECTOR, ".overlay")
+            )
+
+
+    def continue_activity(self, title):
+        # 1: Find program tile by title
+        program_tile = self.wait.until(
+            expected_conditions.presence_of_element_located(
+                (By.XPATH, f"//div[contains(@class,'item-dashboard-active')]//h2[normalize-space(text())='{title}']/ancestor::div[contains(@class,'item-dashboard-active')]")
+            )
+        )
+
+        # 2: Scroll program tile into view
+        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", program_tile)
+        self.wait.until(lambda d: program_tile.is_displayed() and program_tile.is_enabled())
+        time.sleep(0.5)
+
+        # 3: Find table of contents button within tile
+        continue_button = program_tile.find_element(By.CSS_SELECTOR, "a.btn-primary")
+        self.wait.until(lambda d: continue_button.is_displayed() and continue_button.is_enabled())
+
+        # 4: Click button
+        continue_button.click()
 
 
 class SentioLanding:
