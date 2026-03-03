@@ -3,20 +3,19 @@
 from selenium.webdriver.common.by import By
 
 
+# TEST: Navigate Homeweb
 def test_bat_web_001(homeweb):
     # 1: Test - Navigate to Homeweb landing
     homeweb.navigate_landing()
     assert homeweb.domain in homeweb.current_url.lower()
-    homeweb.wait.until(lambda d: d.execute_script("return document.readyState") == "complete")
 
 
+# TEST: Homeweb Landing Articles
 def test_bat_web_002(homeweb):
     assert homeweb.is_landing()
-    resources = homeweb.public["elements"]["resources"]
-    paths = homeweb.public["paths"]["resources"]
     articles = homeweb.get_articles()
 
-    # Test - Resources 1-3 (Dynamic articles -> subject to change)
+    # 1: Test - Resources 1-3 (Dynamic articles -> subject to change)
     for article in articles:
         locator = f'//h3[contains(normalize-space(), "{article["title"]}")]//ancestor::div[contains(@class,"card-container")]//a[@role="button"]'
         homeweb.click_element(By.XPATH, locator)
@@ -24,13 +23,16 @@ def test_bat_web_002(homeweb):
         assert homeweb.wait_for_resource_content()
         homeweb.go_back()
 
-    # Test - Resource 4 (Static article)
+    # 2: Test - Resource 4 (Static article)
+    resources = homeweb.public["elements"]["resources"]
+    paths = homeweb.public["paths"]["resources"]
     homeweb.click_element(By.LINK_TEXT, resources["toolkit"])
     assert paths["toolkit"] in homeweb.current_url.lower()
     assert homeweb.wait_for_resource_content()
     homeweb.go_back()
 
 
+# TEST: Homeweb Login
 def test_bat_web_003(homeweb, quantum, credentials):
     assert homeweb.is_landing()
     buttons = homeweb.public["elements"]["buttons"]
@@ -44,6 +46,7 @@ def test_bat_web_003(homeweb, quantum, credentials):
     assert homeweb.wait_for_dashboard()
 
 
+# TEST: Homeweb Resource
 def test_bat_web_004(homeweb):
     assert homeweb.is_authenticated()
 
@@ -53,6 +56,7 @@ def test_bat_web_004(homeweb):
     assert homeweb.wait_for_resource_content()
 
 
+# TEST: Sentio kick-out
 def test_bat_web_005(homeweb):
     assert homeweb.is_authenticated()
 
@@ -67,6 +71,7 @@ def test_bat_web_005(homeweb):
     homeweb.go_back()
 
 
+# TEST: Homeweb Logout
 def test_bat_web_006(homeweb):
     assert homeweb.is_authenticated()
     header = homeweb.header
@@ -77,13 +82,13 @@ def test_bat_web_006(homeweb):
     assert header.wait_for_account_menu(), "Menu not found"
 
     # 2: Test - Logout
+    # KNOWN ISSUE 1 - Workaround: Manually navigate back to landing (locale-aware)
     header.click_element(By.CSS_SELECTOR, header_buttons["sign_out"])
     assert homeweb.wait_for_logout()
-
-    # KNOWN ISSUE 1 - Workaround: Manually navigate back to landing (locale-aware)
     homeweb.navigate_landing()
 
 
+# TEST: Homeweb Login - Different user
 def test_bat_web_007(homeweb, quantum, credentials):
     assert homeweb.is_landing()
     header = homeweb.header
@@ -99,6 +104,7 @@ def test_bat_web_007(homeweb, quantum, credentials):
     assert homeweb.wait_for_dashboard()
 
 
+# TEST: Kickouts
 def test_bat_web_008(homeweb):
     assert homeweb.is_authenticated()
     childcare_resource_target = homeweb.base_url + "/app/" + homeweb.language + "/resources/579ba4db88db7af01fe6ddd4"
@@ -124,6 +130,7 @@ def test_bat_web_008(homeweb):
     assert homeweb.wait_for_lifestyle_transfer()
 
 
+# TEST: Course consent
 def test_bat_web_009(homeweb):
     assert homeweb.is_authenticated()
     header = homeweb.header
@@ -155,6 +162,7 @@ def test_bat_web_009(homeweb):
     homeweb.navigate_landing()
 
 
+# TEST: Embedded resources
 def test_bat_web_010(homeweb):
     lang_prefix = "" if homeweb.language.lower() == "en" else f"/{homeweb.language}"
 
