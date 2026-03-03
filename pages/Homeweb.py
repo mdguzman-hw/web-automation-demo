@@ -144,18 +144,20 @@ class Homeweb(BasePage):
         )
 
     def get_articles(self):
+        # 1: Find articles container
         self.wait.until(
             expected_conditions.presence_of_element_located(
                 (By.CLASS_NAME, "row-cards")
             )
         )
 
+        # 2: Find all articles in container
         article_elements = self.wait.until(
             expected_conditions.presence_of_all_elements_located((By.CSS_SELECTOR, ".row-cards .card-container"))
         )
 
+        # 3: Store article titles and href into an array
         articles = []
-
         for article in article_elements:
             title = article.find_element(By.CLASS_NAME, "card-title").text
             href = article.find_element(By.CSS_SELECTOR, "a[role='button']").get_attribute("href")
@@ -165,4 +167,5 @@ class Homeweb(BasePage):
                 "href": href
             })
 
+        # 4: Return array of articles
         return articles
