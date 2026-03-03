@@ -1,6 +1,0 @@
-class Authenticated:
-    EN = {
-    }
-
-    FR = {
-    }
