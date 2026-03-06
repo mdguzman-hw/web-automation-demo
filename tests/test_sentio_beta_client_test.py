@@ -4,11 +4,13 @@
 from selenium.webdriver.common.by import By
 
 
+# TEST: Navigate Sentio Beta - Client
 def test_bat_web_012(sentio_beta_client_test):
     sentio_beta_client_test.navigate_landing()
     assert sentio_beta_client_test.landing_url in sentio_beta_client_test.current_url.lower()
 
 
+# TEST: Sentio Beta - Client Login
 def test_bat_web_013(sentio_beta_client_test, quantum, credentials):
     assert sentio_beta_client_test._is_landing
     elements = sentio_beta_client_test.landing_elements
@@ -24,6 +26,7 @@ def test_bat_web_013(sentio_beta_client_test, quantum, credentials):
     assert sentio_beta_client_test.wait_for_dashboard()
 
 
+# TEST: Start Program
 def test_bat_web_014(sentio_beta_client_test):
     assert sentio_beta_client_test._is_authenticated
 
@@ -54,7 +57,7 @@ def test_bat_web_014(sentio_beta_client_test):
     # Specify program to test
     test_program = next(
         p for p in valid_programs
-        if p.title == sentio_beta_client_test.programs["mental_health"]
+        if p.title == sentio_beta_client_test.programs["anxiety"]
     )
 
     sentio_beta_client_test.navigate_overview(test_program.title)
@@ -92,6 +95,7 @@ def test_bat_web_014(sentio_beta_client_test):
     )
 
 
+# TEST: Continue Program
 def test_bat_web_015(sentio_beta_client_test):
     assert sentio_beta_client_test._is_authenticated
     assert sentio_beta_client_test.dashboard_endpoint in sentio_beta_client_test.current_url.lower()
@@ -104,19 +108,20 @@ def test_bat_web_015(sentio_beta_client_test):
     # Specify program to test
     test_program = next(
         p for p in in_progress_programs
-        if p.title == sentio_beta_client_test.programs["mental_health"]
+        if p.title == sentio_beta_client_test.programs["anxiety"]
     )
 
     sentio_beta_client_test.continue_program(test_program.title)
     assert test_program.href_toc in sentio_beta_client_test.current_url.lower()
 
 
+# TEST: Start Goal
 def test_bat_web_016(sentio_beta_client_test):
     assert sentio_beta_client_test._is_authenticated
     sentio_beta_client_test.navigate_dashboard()
     assert sentio_beta_client_test.wait_for_dashboard()
 
-    sentio_beta_client_test.continue_program(sentio_beta_client_test.programs["mental_health"])
+    sentio_beta_client_test.continue_program(sentio_beta_client_test.programs["anxiety"])
     assert sentio_beta_client_test.program_status_endpoint
 
     modules = sentio_beta_client_test.available_modules()
@@ -132,5 +137,45 @@ def test_bat_web_016(sentio_beta_client_test):
     in_progress_module = next(
         (m for m in modules if m.status == "IN-PROGRESS"), None
     )
+
     assert in_progress_module, "No in-progress module found"
-    assert in_progress_module.title == sentio_beta_client_test.current_goal
+    assert in_progress_module.title == sentio_beta_client_test.current_module
+
+# TEST: Continue Goal
+def test_bat_web_017(sentio_beta_client_test):
+    assert sentio_beta_client_test._is_authenticated
+    assert sentio_beta_client_test.program_status_endpoint
+
+    sentio_beta_client_test.continue_goal()
+
+
+# TEST: Complete Goal
+def test_bat_web_018(sentio_beta_client_test):
+    assert sentio_beta_client_test._is_authenticated
+
+    sentio_beta_client_test.complete_goal()
+    assert sentio_beta_client_test.program_status_endpoint
+
+    modules = sentio_beta_client_test.available_modules()
+    completed_module = next(
+        (m for m in modules if m.title == sentio_beta_client_test.current_module), None
+    )
+    assert completed_module, "Completed module not found"
+    assert completed_module.status == "COMPLETED"
+
+# TEST: Complete Program
+# def test_bat_web_019(sentio_beta_client_test):
+#     assert sentio_beta_client_test._is_authenticated
+#     assert sentio_beta_client_test.program_status_endpoint
+#
+#     modules = sentio_beta_client_test.available_modules()
+#     while any(m.status != "COMPLETED" for m in modules):
+#         sentio_beta_client_test.continue_goal()
+#         print(f"CURRENT GOAL: {sentio_beta_client_test.current_module}")
+#         sentio_beta_client_test.complete_goal()
+#         print(f"GOAL COMPLETED: {sentio_beta_client_test.current_module}")
+#         modules = sentio_beta_client_test.available_modules()
+#
+#     assert all(m.status == "COMPLETED" for m in modules)
+#     input("ALL GOALS COMPLETED. Press Enter to continue...")
+
