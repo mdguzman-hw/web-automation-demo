@@ -45,6 +45,10 @@ class SentioBetaClientTest(BasePage):
     def module_complete_endpoint(self):
         return "/complete" in self.current_url
 
+    @property
+    def program_survey_endpoint(self):
+        return "/survey" in self.current_url
+
     def __init__(self, driver, language):
         super().__init__(driver, language)
         self._is_authenticated = False
@@ -310,7 +314,6 @@ class SentioBetaClientTest(BasePage):
                 self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", continue_btn)
                 self.wait.until(lambda d: continue_btn.is_displayed() and continue_btn.is_enabled())
                 time.sleep(1)
-                # input("Press enter to continue...")
                 continue_btn.click()
                 break
 
@@ -332,9 +335,28 @@ class SentioBetaClientTest(BasePage):
 
             self.wait.until(expected_conditions.url_changes(old_url))
 
+
         self.complete_goal_survey()
+
+        if self.program_survey_endpoint:
+            self.complete_program_survey()
+            return
+
         self.navigate_toc()
         assert self.program_status_endpoint
+
+    def complete_program_survey(self):
+        # Click "Finish program" button
+        finish_btn = self.wait.until(expected_conditions.element_to_be_clickable(
+            (By.CSS_SELECTOR, "button.btn-outline-muted")
+        ))
+        finish_btn.click()
+
+        # Hidden form is now revealed — submit it
+        self.wait.until(expected_conditions.visibility_of_element_located(
+            (By.CSS_SELECTOR, ".toggle-target")
+        ))
+        self.click_element(By.CSS_SELECTOR, ".toggle-target button[type='submit']")
 
     def is_exercise(self):
         next_btn = self.driver.find_elements(
@@ -371,7 +393,6 @@ class SentioBetaClientTest(BasePage):
                 )
                 if next_btn and "locked" not in next_btn[0].get_attribute("class"):
                     break
-                input(f"EXERCISE COMPLETED. Press enter to continue")
         else:
             # Type B - embedded single-task: complete steps, submit navigates automatically
             self.complete_steps()
@@ -399,34 +420,53 @@ class SentioBetaClientTest(BasePage):
         self.click_element(By.CSS_SELECTOR, 'a.btn.btn-primary[href*="/exercises/"][href$="/input"]')
         self.wait.until(expected_conditions.url_contains("/input"))
 
+    def select_previous_entry(self):
+        previous_entry_btn = self.driver.find_elements(By.CSS_SELECTOR, "button[data-bs-target='#modal-form-previous-entry']")
+        if not previous_entry_btn:
+            return False
+
+        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", previous_entry_btn[0])
+        self.wait.until(lambda d: previous_entry_btn[0].is_displayed() and previous_entry_btn[0].is_enabled())
+        time.sleep(1)
+        previous_entry_btn[0].click()
+        time.sleep(1)
+        self.wait.until(expected_conditions.visibility_of_element_located((By.CSS_SELECTOR, ".modal.show")))
+
+        select_entry_btns = self.wait.until(expected_conditions.presence_of_all_elements_located(
+            (By.CSS_SELECTOR, ".modal.show .item-exercise-entry .btn-outline-muted")
+        ))
+        # select_entry_btns = self.driver.find_elements(By.CSS_SELECTOR, ".modal.show .item-exercise-entry .btn-outline-muted")
+        selected_entry = random.choice(select_entry_btns)
+
+        # DEBUGGING ONLY
+        # entry_item = selected_entry.find_element(By.XPATH, "./ancestor::div[contains(@class,'item-exercise-entry')]")
+        # pre_title = entry_item.find_element(By.CSS_SELECTOR, ".pre-title").text.strip()
+        # title = entry_item.find_element(By.CSS_SELECTOR, ".title").text.strip()
+        # print(f"SELECTED ENTRY: {pre_title} | {title}. Press enter to continue")
+
+        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", selected_entry)
+        self.wait.until(lambda d: selected_entry.is_displayed() and selected_entry.is_enabled())
+        time.sleep(1)
+        selected_entry.click()
+        self.wait.until(expected_conditions.invisibility_of_element_located((By.CSS_SELECTOR, ".modal.show")))
+        time.sleep(1)
+        return True
+
     def complete_steps(self):
         timestamp = datetime.now().strftime("%m-%d-%Y-%H%M%S")
         base_text = f"TESTING-{timestamp}"
 
         while True:
+            # --- Select previous entry if required ---
+            if self.select_previous_entry():
+                continue
+
             step_container = self.wait.until(
                 expected_conditions.visibility_of_element_located(
                     (By.CSS_SELECTOR, ".container-question:not([style*='display: none'])")
                 )
             )
 
-            # --- Select previous entry if required ---
-            previous_entry_btn = self.driver.find_elements(By.CSS_SELECTOR, "button[data-bs-target='#modal-form-previous-entry']")
-            if previous_entry_btn:
-                self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", previous_entry_btn[0])
-                self.wait.until(lambda d: previous_entry_btn[0].is_displayed() and previous_entry_btn[0].is_enabled())
-                time.sleep(1)
-                previous_entry_btn[0].click()
-                self.wait.until(expected_conditions.visibility_of_element_located((By.CSS_SELECTOR, ".modal.show")))
-
-                select_entry_btns = self.driver.find_elements(By.CSS_SELECTOR, ".modal.show .item-exercise-entry .btn-outline-muted")
-                selected_entry = random.choice(select_entry_btns)
-                self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", selected_entry)
-                self.wait.until(lambda d: selected_entry.is_displayed() and selected_entry.is_enabled())
-                time.sleep(1)
-                selected_entry.click()
-                self.wait.until(expected_conditions.invisibility_of_element_located((By.CSS_SELECTOR, ".modal.show")))
-                continue
 
             example_elements = step_container.find_elements(By.CSS_SELECTOR, ".question-example .text-grey-dark")
             example_text = example_elements[0].text.strip() if example_elements else ""

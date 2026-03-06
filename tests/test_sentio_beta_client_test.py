@@ -164,18 +164,32 @@ def test_bat_web_018(sentio_beta_client_test):
     assert completed_module.status == "COMPLETED"
 
 # TEST: Complete Program
-# def test_bat_web_019(sentio_beta_client_test):
-#     assert sentio_beta_client_test._is_authenticated
-#     assert sentio_beta_client_test.program_status_endpoint
-#
-#     modules = sentio_beta_client_test.available_modules()
-#     while any(m.status != "COMPLETED" for m in modules):
-#         sentio_beta_client_test.continue_goal()
-#         print(f"CURRENT GOAL: {sentio_beta_client_test.current_module}")
-#         sentio_beta_client_test.complete_goal()
-#         print(f"GOAL COMPLETED: {sentio_beta_client_test.current_module}")
-#         modules = sentio_beta_client_test.available_modules()
-#
-#     assert all(m.status == "COMPLETED" for m in modules)
-#     input("ALL GOALS COMPLETED. Press Enter to continue...")
+def test_bat_web_019(sentio_beta_client_test):
+    assert sentio_beta_client_test._is_authenticated
+    assert sentio_beta_client_test.program_status_endpoint
+
+    modules = sentio_beta_client_test.available_modules()
+    while any(module.status != "COMPLETED" for module in modules):
+        sentio_beta_client_test.continue_goal()
+        print(f"CURRENT GOAL: {sentio_beta_client_test.current_module}")
+        sentio_beta_client_test.complete_goal()
+        print(f"GOAL COMPLETED: {sentio_beta_client_test.current_module}")
+        modules = sentio_beta_client_test.available_modules()
+
+    assert all(module.status == "COMPLETED" for module in modules)
+
+# TEST: Sentio Beta - Client Logout
+def test_bat_web_024(sentio_beta_client):
+    assert sentio_beta_client._is_authenticated
+
+    header = sentio_beta_client.header
+    header_buttons = header.elements["buttons"]
+
+    # 4: Test - Menu dropdown
+    header.click_element(By.CLASS_NAME, header_buttons["menu"])
+    assert header.wait_for_account_menu(), "Menu not found"
+
+    # 5: Test - Logout
+    header.click_element(By.CSS_SELECTOR, header_buttons["menu_sign_out"])
+    assert sentio_beta_client.base_url in sentio_beta_client.current_url.lower()
 
