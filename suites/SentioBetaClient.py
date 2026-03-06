@@ -45,13 +45,17 @@ class SentioBetaClient(BasePage):
     def module_complete_endpoint(self):
         return "/complete" in self.current_url
 
+    @property
+    def program_survey_endpoint(self):
+        return "/survey" in self.current_url
+
     def __init__(self, driver, language):
         super().__init__(driver, language)
         self._is_authenticated = False
         self._is_landing = False
         self.programs = Programs.EN if self.language == "en" else Programs.FR
         self.header = None
-        self.current_goal = None
+        self.current_module = None
         self.update_header()
 
     def update_header(self):
@@ -82,11 +86,9 @@ class SentioBetaClient(BasePage):
             lambda d: self.dashboard_endpoint in d.current_url.lower()
         )
 
-    # TODO: Update this to click on the Header-Logo or Header-Dashboard instead of just URL injection and navigation
     def navigate_dashboard(self):
         self.click_element(By.CSS_SELECTOR, self.header.elements["buttons"]["dashboard"])
         self.in_progress_programs()
-        # self.driver.get(self.base_url + self.dashboard_endpoint)
 
     def navigate_overview(self, title):
         # 1: Find program card by title
@@ -109,11 +111,7 @@ class SentioBetaClient(BasePage):
         button.click()
 
     def navigate_assessment(self):
-        button = self.wait.until(
-            expected_conditions.element_to_be_clickable((By.CSS_SELECTOR, "a.btn.btn-primary"))
-        )
-
-        button.click()
+        self.click_element(By.CSS_SELECTOR, "a.btn.btn-primary")
 
     def complete_assessment(self):
         while "/results" not in self.current_url:
@@ -191,7 +189,7 @@ class SentioBetaClient(BasePage):
         programs = []
 
         for program in program_cards:
-            title = program.find_element(By.CSS_SELECTOR, "p.h4").text
+            title = program.find_element(By.CSS_SELECTOR, "p.h4").text.strip()
             href = program.find_element(By.CSS_SELECTOR, "a.btn.btn-primary").get_attribute("href")
             status_elements = program.find_elements(By.CSS_SELECTOR, ".overlay-content")
             status = status_elements[0].text.strip() if status_elements else None
@@ -204,7 +202,7 @@ class SentioBetaClient(BasePage):
         in_progress_programs = []
 
         for program in program_tiles:
-            title = program.find_element(By.CSS_SELECTOR, "h2.header").text
+            title = program.find_element(By.CSS_SELECTOR, "h2.header").text.strip()
             href_toc = program.find_element(By.CSS_SELECTOR, "a.btn.btn-outline-muted").get_attribute("href")
             href_next_activity = program.find_element(By.CSS_SELECTOR, "a.btn.btn-primary").get_attribute("href")
             href_withdraw = program.find_element(By.CSS_SELECTOR, "p.end-service-note a").get_attribute("href")
@@ -268,115 +266,250 @@ class SentioBetaClient(BasePage):
         return [ModuleTile(module) for module in modules]
 
     def wait_for_activity_content(self):
-        element = self.wait.until(
+        return self.wait.until(
             expected_conditions.visibility_of_element_located((By.ID, "page-program-flow"))
         )
 
-        if "exercises/start" in self.driver.current_url:
-            self.setup_exercise()
-
-        return element
-
     def start_goal(self):
-        # 1: Find continue button
-        button = self.wait.until(
-            expected_conditions.visibility_of_element_located((By.CLASS_NAME, "btn-primary"))
-        )
-
-        # 2. Scroll the button into view, if required
-        self.driver.execute_script(
-            "arguments[0].scrollIntoView({block: 'center'});", button
-        )
-        self.wait.until(lambda d: button.is_displayed() and button.is_enabled())
+        # # 1: Find continue button
+        # button = self.wait.until(
+        #     expected_conditions.visibility_of_element_located((By.CLASS_NAME, "btn-primary"))
+        # )
+        #
+        # # 2. Scroll the button into view, if required
+        # self.driver.execute_script(
+        #     "arguments[0].scrollIntoView({block: 'center'});", button
+        # )
+        # self.wait.until(lambda d: button.is_displayed() and button.is_enabled())
+        # button.click()
 
         # 3: Click button
-        button.click()
-
+        self.click_element(By.CLASS_NAME, "btn-primary")
         assert self.wait_for_activity_content()
 
+        # 4: First activity page is just the overview, navigate to start goal
         self.next_activity()
         assert self.wait_for_activity_content()
+        self.current_module = self.wait.until(
+            expected_conditions.visibility_of_element_located((By.CSS_SELECTOR, ".item-program-progress.current .item-inner .item-title"))
+        ).text.strip()
 
-    def next_activity(self):
-        # 1: Find the next button container
-        next_button_container = self.wait.until(
-            expected_conditions.presence_of_element_located(
-                (By.CSS_SELECTOR, ".container-program-progress-footer .item-program-progress.next")
-            )
-        )
+        # 5: Navigate back to status page by clicking table of contents link
+        self.navigate_toc()
 
-        # 2: Scroll to the next button container
-        self.driver.execute_script(
-            # ALTERNATIVE, however, jumps to the element rather than scroll
-            # "arguments[0].scrollIntoView({block: 'center', behavior: 'instant'});",
-            "arguments[0].scrollIntoView({block: 'center'});",
-            next_button_container
-        )
+    def navigate_toc(self):
+        toc = "Table of contents" if self.language == "en" else "Table des matières"
+        self.wait.until(expected_conditions.presence_of_element_located((By.LINK_TEXT, toc)))
         time.sleep(1)
-
-        # 3: Wait for next button to be clickable
-        next_button = self.wait.until(
-            expected_conditions.element_to_be_clickable(
-                (By.CSS_SELECTOR, ".container-program-progress-footer .item-program-progress.next a")
-            )
-        )
-
-        # 4: Click next button
-        next_button.click()
+        self.click_element(By.LINK_TEXT, toc)
+        assert self.program_status_endpoint
 
     def continue_goal(self):
-        self.wait.until(expected_conditions.url_contains("/status"))
-        time.sleep(1)
+        self.wait.until(expected_conditions.presence_of_element_located((By.CSS_SELECTOR, "div.accordion-header")))
         module_accordions = self.driver.find_elements(By.CSS_SELECTOR, "div.accordion-header")
-
         for module in module_accordions:
             if module.find_elements(By.CSS_SELECTOR, ".badge-in-progress"):
-                self.current_goal = module.find_element(By.CSS_SELECTOR, "div.button-header span.title.font-size-lg").text
-                continue_btn = module.find_element(
-                    By.CSS_SELECTOR,
-                    "a.btn.btn-primary-light.font-size-sm"
-                )
+                self.current_module = module.find_element(By.CSS_SELECTOR, "div.button-header span.title.font-size-lg").text.strip()
+                continue_btn = module.find_element(By.CSS_SELECTOR, "a.btn.btn-primary-light.font-size-sm")
+                self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", continue_btn)
+                self.wait.until(lambda d: continue_btn.is_displayed() and continue_btn.is_enabled())
+                time.sleep(1)
                 continue_btn.click()
                 break
 
-        self.wait_for_activity_content()
+        assert self.wait_for_activity_content()
 
     def complete_goal(self):
         while not self.module_complete_endpoint:
-            old_url = self.driver.current_url
+            old_url = self.current_url
 
             self.next_activity()
             assert self.wait_for_activity_content()
 
-            if self.driver.current_url.endswith("/input"):
-                return
+            if self.is_exercise():
+                self.complete_exercise()
+                continue
 
-            # Wait for the URL to change
+            if self.has_media():
+                self.play_media()
+
             self.wait.until(expected_conditions.url_changes(old_url))
 
+
         self.complete_goal_survey()
-        assert self.wait_for_activity_content()
 
-        toc = "Table of contents" if self.language == "en" else "Table des matières"
-        time.sleep(1)
-        # toc_link = progress_container.find_element(By.LINK_TEXT, toc)
-        toc_link = self.wait.until(expected_conditions.element_to_be_clickable(
-            (By.LINK_TEXT, toc)
-        ))
+        if self.program_survey_endpoint:
+            self.complete_program_survey()
+            return
 
-        toc_link.click()
-
+        self.navigate_toc()
         assert self.program_status_endpoint
-        assert self.current_goal_completed()
-        self.current_goal = None
 
-    def current_goal_completed(self):
-        module = self.driver.find_element(
-            By.XPATH,
-            f"//div[@class='accordion-header']//span[@class='title font-size-lg' and text()='{self.current_goal}']/ancestor::div[@class='button-header']"
+    def complete_program_survey(self):
+        # Click "Finish program" button
+        finish_btn = self.wait.until(expected_conditions.element_to_be_clickable(
+            (By.CSS_SELECTOR, "button.btn-outline-muted")
+        ))
+        finish_btn.click()
+
+        # Hidden form is now revealed — submit it
+        self.wait.until(expected_conditions.visibility_of_element_located(
+            (By.CSS_SELECTOR, ".toggle-target")
+        ))
+        self.click_element(By.CSS_SELECTOR, ".toggle-target button[type='submit']")
+
+    def is_exercise(self):
+        next_btn = self.driver.find_elements(
+            By.CSS_SELECTOR,
+            ".container-program-progress-footer .item-program-progress.next .item-inner"
         )
-        badge = module.find_element(By.CSS_SELECTOR, "span.badge")
-        return self.wait.until(lambda driver: "badge-complete" in badge.get_attribute("class"))
+        if not next_btn:
+            return False
+        classes = next_btn[0].get_attribute("class")
+        return "locked" in classes or bool(next_btn[0].find_elements(By.CSS_SELECTOR, ".overlay"))
+
+    def complete_exercise(self):
+        if "exercises/start" in self.current_url:
+            # Type A - multi-task: setup then loop tasks until next unlocks
+            self.setup_exercise()
+            while True:
+                self.start_exercise()
+                self.complete_steps()
+                # Wait to be back on task list
+                self.wait.until(expected_conditions.url_contains("/start"))
+
+                # If another unlocked task exists, continue loop
+                next_task = self.driver.find_elements(
+                    By.CSS_SELECTOR,
+                    'a.btn.btn-primary[href*="/exercises/"][href$="/input"]'
+                )
+                if next_task:
+                    continue
+
+                # No more tasks - check if footer next is unlocked
+                next_btn = self.driver.find_elements(
+                    By.CSS_SELECTOR,
+                    ".container-program-progress-footer .item-program-progress.next .item-inner"
+                )
+                if next_btn and "locked" not in next_btn[0].get_attribute("class"):
+                    break
+        else:
+            # Type B - embedded single-task: complete steps, submit navigates automatically
+            self.complete_steps()
+
+    def setup_exercise(self):
+        # text = "Setup Tasks" if self.language == "en" else "Tâches de configuration"
+        # self.wait.until(
+        #     expected_conditions.element_to_be_clickable(
+        #         (By.XPATH, f'//button[@type="submit" and normalize-space()="{text}"]')
+        #     )
+        # ).click()
+        self.click_element(By.CSS_SELECTOR, "button[type='submit']")
+        self.wait.until(expected_conditions.url_contains("/exercises/"))
+        self.wait.until(expected_conditions.url_contains("/start"))
+
+    def start_exercise(self):
+        # start_button = self.wait.until(
+        #     expected_conditions.element_to_be_clickable(
+        #         (By.CSS_SELECTOR, 'a.btn.btn-primary[href*="/exercises/"][href$="/input"]')
+        #     )
+        # )
+        # self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", start_button)
+        # time.sleep(0.5)
+        # start_button.click()
+        self.click_element(By.CSS_SELECTOR, 'a.btn.btn-primary[href*="/exercises/"][href$="/input"]')
+        self.wait.until(expected_conditions.url_contains("/input"))
+
+    def select_previous_entry(self):
+        previous_entry_btn = self.driver.find_elements(By.CSS_SELECTOR, "button[data-bs-target='#modal-form-previous-entry']")
+        if not previous_entry_btn:
+            return False
+
+        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", previous_entry_btn[0])
+        self.wait.until(lambda d: previous_entry_btn[0].is_displayed() and previous_entry_btn[0].is_enabled())
+        time.sleep(1)
+        previous_entry_btn[0].click()
+        time.sleep(1)
+        self.wait.until(expected_conditions.visibility_of_element_located((By.CSS_SELECTOR, ".modal.show")))
+
+        select_entry_btns = self.wait.until(expected_conditions.presence_of_all_elements_located(
+            (By.CSS_SELECTOR, ".modal.show .item-exercise-entry .btn-outline-muted")
+        ))
+        # select_entry_btns = self.driver.find_elements(By.CSS_SELECTOR, ".modal.show .item-exercise-entry .btn-outline-muted")
+        selected_entry = random.choice(select_entry_btns)
+
+        # DEBUGGING ONLY
+        # entry_item = selected_entry.find_element(By.XPATH, "./ancestor::div[contains(@class,'item-exercise-entry')]")
+        # pre_title = entry_item.find_element(By.CSS_SELECTOR, ".pre-title").text.strip()
+        # title = entry_item.find_element(By.CSS_SELECTOR, ".title").text.strip()
+        # print(f"SELECTED ENTRY: {pre_title} | {title}. Press enter to continue")
+
+        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", selected_entry)
+        self.wait.until(lambda d: selected_entry.is_displayed() and selected_entry.is_enabled())
+        time.sleep(1)
+        selected_entry.click()
+        self.wait.until(expected_conditions.invisibility_of_element_located((By.CSS_SELECTOR, ".modal.show")))
+        time.sleep(1)
+        return True
+
+    def complete_steps(self):
+        timestamp = datetime.now().strftime("%m-%d-%Y-%H%M%S")
+        base_text = f"TESTING-{timestamp}"
+
+        while True:
+            # --- Select previous entry if required ---
+            if self.select_previous_entry():
+                continue
+
+            step_container = self.wait.until(
+                expected_conditions.visibility_of_element_located(
+                    (By.CSS_SELECTOR, ".container-question:not([style*='display: none'])")
+                )
+            )
+
+
+            example_elements = step_container.find_elements(By.CSS_SELECTOR, ".question-example .text-grey-dark")
+            example_text = example_elements[0].text.strip() if example_elements else ""
+            full_text = f"{base_text} {example_text}"
+
+            text_areas = step_container.find_elements(By.TAG_NAME, "textarea")
+            if text_areas:
+                time.sleep(1)
+                text_areas[0].clear()
+                text_areas[0].send_keys(full_text)
+
+            checkboxes = step_container.find_elements(By.CSS_SELECTOR, "input[type='checkbox']")
+            if checkboxes:
+                time.sleep(1)
+                random.choice(checkboxes).click()
+
+            submit_buttons = step_container.find_elements(By.CSS_SELECTOR, "button[type='submit']")
+            if submit_buttons:
+                self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", submit_buttons[0])
+                self.wait.until(lambda d: submit_buttons[0].is_displayed() and submit_buttons[0].is_enabled())
+                time.sleep(1)
+                submit_buttons[0].click()
+                break
+
+            next_buttons = step_container.find_elements(By.CSS_SELECTOR, ".btn-next")
+            if next_buttons:
+                self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", next_buttons[0])
+                self.wait.until(lambda d: next_buttons[0].is_displayed() and next_buttons[0].is_enabled())
+                time.sleep(1)
+                next_buttons[0].click()
+            else:
+                break
+
+    def has_media(self):
+        return bool(self.driver.find_elements(By.CSS_SELECTOR, "video, audio"))
+
+    def play_media(self):
+        media = self.wait.until(
+            expected_conditions.presence_of_element_located((By.CSS_SELECTOR, "video, audio"))
+        )
+        self.driver.execute_script("arguments[0].play();", media)
+        time.sleep(3)
+        assert self.driver.execute_script("return !arguments[0].paused;", media)
 
     def complete_goal_survey(self):
         # 1: Find the form container
@@ -399,11 +532,41 @@ class SentioBetaClient(BasePage):
             # self.wait.until(expected_conditions.element_to_be_clickable(choice))
             label.click()
 
-        submit_button = self.wait.until(
-            expected_conditions.element_to_be_clickable((By.CSS_SELECTOR, "form.form-completed-survey button[type='submit']"))
+        # submit_button = self.wait.until(
+        #     expected_conditions.element_to_be_clickable((By.CSS_SELECTOR, "form.form-completed-survey button[type='submit']"))
+        # )
+        #
+        # submit_button.click()
+
+        self.click_element(By.CSS_SELECTOR, "form.form-completed-survey button[type='submit']")
+
+    def next_activity(self):
+        # 1: Find the next button container
+        next_button_container = self.wait.until(
+            expected_conditions.presence_of_element_located(
+                (By.CSS_SELECTOR, ".container-program-progress-footer .item-program-progress.next")
+            )
         )
 
-        submit_button.click()
+        # 2: Scroll to the next button container
+        self.driver.execute_script(
+            # ALTERNATIVE, however, jumps to the element rather than scroll
+            # "arguments[0].scrollIntoView({block: 'center', behavior: 'instant'});",
+            "arguments[0].scrollIntoView({block: 'center'});",
+            next_button_container
+        )
+        time.sleep(1)
+
+        # 3: Wait for next button to be clickable
+        # next_button = self.wait.until(
+        #     expected_conditions.element_to_be_clickable(
+        #         (By.CSS_SELECTOR, ".container-program-progress-footer .item-program-progress.next a")
+        #     )
+        # )
+        #
+        # # 4: Click next button
+        # next_button.click()
+        self.click_element(By.CSS_SELECTOR, ".container-program-progress-footer .item-program-progress.next a")
 
     def withdraw_program(self, program):
         # 1: Locate program tile
@@ -452,150 +615,12 @@ class SentioBetaClient(BasePage):
             # self.wait.until(expected_conditions.element_to_be_clickable(choice))
             label.click()
 
-        submit_button = self.wait.until(
-            expected_conditions.element_to_be_clickable((By.CSS_SELECTOR, "form.form-goal-survey button[type='submit']"))
-        )
-
-        submit_button.click()
-
-    def setup_exercise(self):
-        text = "Setup Tasks" if self.language == "en" else "Tâches de configuration"
-
-        setup_button = self.wait.until(
-            expected_conditions.element_to_be_clickable(
-                (By.XPATH, f'//button[@type="submit" and normalize-space()="{text}"]')
-            )
-        )
-
-        setup_button.click()
-
-        assert "/exercises/" in self.driver.current_url
-        assert self.driver.current_url.endswith("/start")
-
-        self.start_exercise()
-
-    def start_exercise(self):
-        # Wait for the start task button
-        start_button = self.wait.until(
-            expected_conditions.element_to_be_clickable(
-                (By.CSS_SELECTOR, 'a.btn.btn-primary[href*="/exercises/"][href$="/input"]')
-            )
-        )
-
-        # Scroll into view (prevents click interception)
-        self.driver.execute_script(
-            "arguments[0].scrollIntoView({block: 'center'});",
-            start_button
-        )
-        time.sleep(0.5)
-
-        start_button.click()
-
-        # Wait for navigation to exercise page and content to load
-        self.wait_for_exercise_content()
-
-    def wait_for_exercise_content(self):
-        assert "/exercises/" in self.driver.current_url
-        assert self.driver.current_url.endswith("/input")
-
-        return self.wait.until(
-            expected_conditions.visibility_of_element_located((By.ID, "container-page-vue"))
-        )
-
-    def complete_exercise(self):
-        timestamp = datetime.now().strftime("%m-%d-%Y-%H%M%S")
-        base_text = f"TESTING-{timestamp}"
-
-        while not self.driver.current_url.endswith("/start"):
-            # Wait for any visible step
-            step_container = self.wait.until(
-                expected_conditions.visibility_of_element_located(
-                    (By.CSS_SELECTOR, ".container-question:not([style*='display: none'])")
-                )
-            )
-
-            # --- Extract example text dynamically ---
-            example_elements = step_container.find_elements(
-                By.CSS_SELECTOR, ".question-example .text-grey-dark"
-            )
-            example_text = example_elements[0].text.strip() if example_elements else ""
-
-            full_text = f"{base_text} {example_text}"
-
-            # --- Fill textarea if present ---
-            text_areas = step_container.find_elements(By.TAG_NAME, "textarea")
-            if text_areas:
-                textarea = text_areas[0]
-                textarea.clear()
-                textarea.send_keys(full_text)
-
-            # --- Click first checkbox if present ---
-            checkboxes = step_container.find_elements(By.CSS_SELECTOR, "input[type='checkbox']")
-            if checkboxes:
-                # Pick a random checkbox from the available ones
-                random_checkbox = random.choice(checkboxes)
-                random_checkbox.click()
-
-            # --- If Submit exists → click and break ---
-            submit_buttons = step_container.find_elements(
-                By.CSS_SELECTOR, "button[type='submit']"
-            )
-            if submit_buttons:
-                self.wait.until(lambda d: submit_buttons[0].is_enabled())
-                time.sleep(1)
-                submit_buttons[0].click()
-                break
-
-            # --- Otherwise click Next ---
-            next_buttons = step_container.find_elements(By.CSS_SELECTOR, ".btn-next")
-            if next_buttons:
-                self.wait.until(lambda d: next_buttons[0].is_enabled())
-                time.sleep(1)
-                next_buttons[0].click()
-            else:
-                break
-
-    def complete_exercise_series(self):
-        next_button_clickable = False
-        while not next_button_clickable:
-            self.start_exercise()
-            self.complete_exercise()
-
-            next_btn = self.wait.until(
-                lambda d: d.find_element(
-                    By.CSS_SELECTOR,
-                    ".container-program-progress .item-program-progress.next .item-inner"
-                )
-            )
-
-            # Determine if unlocked
-            next_button_clickable = (
-                    "locked" not in next_btn.get_attribute("class") and
-                    not next_btn.find_elements(By.CSS_SELECTOR, ".overlay")
-            )
-
-
-    def continue_activity(self, title):
-        # 1: Find program tile by title
-        program_tile = self.wait.until(
-            expected_conditions.presence_of_element_located(
-                (By.XPATH, f"//div[contains(@class,'item-dashboard-active')]//h2[normalize-space(text())='{title}']/ancestor::div[contains(@class,'item-dashboard-active')]")
-            )
-        )
-
-        # 2: Scroll program tile into view
-        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", program_tile)
-        self.wait.until(lambda d: program_tile.is_displayed() and program_tile.is_enabled())
-        time.sleep(0.5)
-
-        # 3: Find table of contents button within tile
-        continue_button = program_tile.find_element(By.CSS_SELECTOR, "a.btn-primary")
-        self.wait.until(lambda d: continue_button.is_displayed() and continue_button.is_enabled())
-
-        # 4: Click button
-        continue_button.click()
-
-    # def complete_program(self):
+        self.click_element(By.CSS_SELECTOR, "form.form-goal-survey button[type='submit']")
+        # submit_button = self.wait.until(
+        #     expected_conditions.element_to_be_clickable((By.CSS_SELECTOR, "form.form-goal-survey button[type='submit']"))
+        # )
+        #
+        # submit_button.click()
 
 
 class SentioLanding:
@@ -654,14 +679,21 @@ class ProgramTier:
 
 
 class ModuleTile:
-    def __init__(self, root_element):
-        self._root = root_element
+    def __init__(self, tile):
+        self.tile = tile
 
     @property
     def title(self):
-        return self._root.find_element(By.CSS_SELECTOR, ".title").text
+        return self.tile.find_element(By.CSS_SELECTOR, ".title").text.strip()
 
     @property
     def status(self):
-        badges = self._root.find_elements(By.CSS_SELECTOR, ".badge-container .badge")
-        return badges[0].text.strip() if badges else "N/A"
+        badges = self.tile.find_elements(By.CSS_SELECTOR, ".badge-container .badge")
+        if not badges:
+            return None
+        classes = badges[0].get_attribute("class")
+        if "badge-complete" in classes:
+            return "COMPLETED"
+        if "badge-in-progress" in classes:
+            return "IN-PROGRESS"
+        return None
