@@ -99,8 +99,8 @@ def test_bat_web_007(homeweb, quantum, credentials):
     header.click_element(By.CLASS_NAME, header_buttons["sign_in"])
     assert paths["sign_in"] in quantum.current_url.lower()
 
-    # 2: Test - Login - Homeweb - Demo
-    quantum.login(credentials["demo"]["email"], credentials["demo"]["password"])
+    # 2: Test - Login - Homeweb - DSG Demo
+    quantum.login(credentials["dsg_demo"]["email"], credentials["dsg_demo"]["password"])
     assert homeweb.wait_for_dashboard()
 
 
@@ -162,11 +162,48 @@ def test_bat_web_009(homeweb):
     homeweb.navigate_landing()
 
 
-# TODO: BAT-WEB-010 | Demo account - Clear active appointments
+# def test_bat_web_010(homeweb, quantum, credentials):
+#     assert homeweb.is_landing()
+#     header = homeweb.header
+#     header_buttons = header.elements["buttons"]
+#     paths = header.paths["buttons"]
+#
+#     # 1: Test - Sign In - Header
+#     header.click_element(By.CLASS_NAME, header_buttons["sign_in"])
+#     assert paths["sign_in"] in quantum.current_url.lower()
+#
+#     # 2: Test - Login - Homeweb - HHI Demo
+#     quantum.login(credentials["hhi_demo"]["email"], credentials["hhi_demo"]["password"])
+#     assert homeweb.wait_for_dashboard()
+#
+#     # 3: Test - Check and cancel active appointments
+#     appointments = homeweb.get_active_appointments()
+#     topics = [a.topic for a in appointments]
+#
+#     for topic in topics:
+#         homeweb.end_services(topic)
+#         assert homeweb.wait_for_dashboard()
+#         remaining = homeweb.get_active_appointments()
+#         assert not any(a.topic == topic for a in remaining)
+#
+#
+#     # 4: Test - Menu dropdown
+#     header.click_element(By.CLASS_NAME, header_buttons["menu"])
+#     assert header.wait_for_account_menu(), "Menu not found"
+#
+#     # 5: Test - Logout
+#     header.click_element(By.CSS_SELECTOR, header_buttons["sign_out"])
+#     assert homeweb.wait_for_logout()
+#
+#     # KNOWN ISSUE 1 - Workaround: Manually navigate back to landing (locale-aware)
+#     homeweb.navigate_landing()
+
+
 # TODO: BAT-WEB-011 | Live Chat
 
 # TEST: Mobile - Embedded resources
 def test_bat_web_012(homeweb):
+    assert homeweb.is_landing()
     lang_prefix = "" if homeweb.language.lower() == "en" else f"/{homeweb.language}"
 
     resource_1_target = homeweb.base_url + lang_prefix + "/summertime-and-your-health?embedded"

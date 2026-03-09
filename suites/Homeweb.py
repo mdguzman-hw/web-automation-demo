@@ -1,3 +1,6 @@
+import random
+import time
+
 from selenium.webdriver.common.by import By
 
 from core.BasePage import BasePage
@@ -169,3 +172,82 @@ class Homeweb(BasePage):
 
         # 4: Return array of articles
         return articles
+
+    def get_active_appointments(self):
+        # 1: Find Active appointments container
+        appointments_zone = self.driver.find_elements(By.CSS_SELECTOR, ".zone-appointments")
+
+        # 1.1: No active appointments
+        if not appointments_zone:
+            print("No active appointments")
+            return []
+
+        # 1.2: Retrieve active appointments
+        appointment_tiles = appointments_zone[0].find_elements(By.CSS_SELECTOR, ".item-booking-v2")
+        return [AppointmentTile(tile) for tile in appointment_tiles]
+
+    def end_services(self, topic):
+        done_text = "Oui j'ai terminé" if self.language == "fr" else "Yes, I am done"
+
+        # 1: Locate appointment tile by topic
+        self.wait.until(
+            expected_conditions.presence_of_element_located((By.CSS_SELECTOR, ".zone-appointments"))
+        )
+        appointment_tile = self.driver.find_element(
+            By.XPATH,
+            f'//p[normalize-space()="{topic}"]/ancestor::div[contains(@class,"item-booking-v2")]'
+        )
+
+        # 2: Within the appointment tile, find and scroll to end services link, if required
+        end_services_link = appointment_tile.find_element(By.CLASS_NAME, "btn-link")
+        self.driver.execute_script(
+            "arguments[0].scrollIntoView({block: 'center'});",
+            end_services_link
+        )
+        time.sleep(0.5)
+
+        # 3: Click end services within tile
+        self.wait.until(expected_conditions.element_to_be_clickable(end_services_link))
+        end_services_link.click()
+
+        # 4: Click Yes, I am done within tile
+        done_btn = self.wait.until(expected_conditions.element_to_be_clickable(
+            (By.LINK_TEXT, done_text)
+        ))
+        done_btn.click()
+
+        # 5: Confirm end services
+        self.wait.until(expected_conditions.url_contains("/services/end"))
+        # input("END SERVICES PAGE. Press ENTER to continue...")
+        self.click_element(By.CSS_SELECTOR, "button.cancel-confirm")
+
+        # 6: Complete end service survey
+        self.complete_end_service_survey()
+
+    def complete_end_service_survey(self):
+        radios = self.wait.until(
+            expected_conditions.presence_of_all_elements_located(
+                (By.CSS_SELECTOR, "form.form-end-service input[type='radio']")
+            )
+        )
+        random.choice(radios).click()
+
+class AppointmentTile:
+    def __init__(self, tile):
+        self._tile = tile
+
+    @property
+    def topic(self):
+        return self._tile.find_element(By.CSS_SELECTOR, ".h4.font-semibold").text.strip()
+
+    @property
+    def date_time(self):
+        return self._tile.find_element(By.CSS_SELECTOR, ".appointment-date-time").text.strip()
+
+    @property
+    def provider(self):
+        return self._tile.find_element(By.CSS_SELECTOR, ".column-provider-details .name").text.strip()
+
+    # @property
+    # def href_cancel(self):
+    #     return self._tile.find_element(By.CSS_SELECTOR, 'a[href*="cancel"]').get_attribute("href")
