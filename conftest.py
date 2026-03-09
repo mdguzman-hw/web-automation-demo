@@ -45,13 +45,17 @@ def credentials():
             "email": os.getenv("PERSONAL_EMAIL"),
             "password": os.getenv("PERSONAL_PASSWORD")
         },
-        "demo": {
-            "email": os.getenv("DEMO_EMAIL"),
-            "password": os.getenv("DEMO_PASSWORD")
+        "dsg_demo": {
+            "email": os.getenv("DSG_DEMO_EMAIL"),
+            "password": os.getenv("DSG_DEMO_PASSWORD")
         },
         "sentio": {
             "email": os.getenv("SENTIO_EMAIL"),
             "password": os.getenv("SENTIO_PASSWORD")
+        },
+        "hhi_demo": {
+            "email": os.getenv("HHI_DEMO_EMAIL"),
+            "password": os.getenv("HHI_DEMO_PASSWORD")
         }
     }
 
