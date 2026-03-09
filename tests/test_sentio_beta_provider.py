@@ -4,18 +4,19 @@ from selenium.webdriver.common.by import By
 
 
 # TEST: Navigate Sentio Beta - Provider
-def test_bat_web_021(sentio_beta_provider, quantum):
+def test_bat_web_024(sentio_beta_provider, quantum):
     sentio_beta_provider.driver.get(sentio_beta_provider.base_url)
     assert quantum.base_url in sentio_beta_provider.current_url.lower()
 
 
 # TEST: Sentio Beta Provider Login
-def test_bat_web_022(sentio_beta_provider, quantum, credentials):
+def test_bat_web_025(sentio_beta_provider, quantum, credentials):
     quantum.login(credentials["personal"]["email"], credentials["personal"]["password"])
     assert sentio_beta_provider.wait_for_login()
 
+
 # TEST: New Dashboard
-def test_bat_web_023(sentio_beta_provider):
+def test_bat_web_026(sentio_beta_provider):
     assert sentio_beta_provider._is_authenticated
 
     # Login always navigates to EN, need to toggle to french manually after login
@@ -29,8 +30,9 @@ def test_bat_web_023(sentio_beta_provider):
     header.click_element(By.CSS_SELECTOR, header_elements["new"])
     assert sentio_beta_provider.wait_for_dashboard("new")
 
+
 # TEST: Sentio Beta Provider Logout
-def test_bat_web_024(sentio_beta_provider, quantum):
+def test_bat_web_027(sentio_beta_provider, quantum):
     assert sentio_beta_provider._is_authenticated
 
     header = sentio_beta_provider.header

@@ -162,8 +162,11 @@ def test_bat_web_009(homeweb):
     homeweb.navigate_landing()
 
 
-# TEST: Embedded resources
-def test_bat_web_010(homeweb):
+# TODO: BAT-WEB-010 | Demo account - Clear active appointments
+# TODO: BAT-WEB-011 | Live Chat
+
+# TEST: Mobile - Embedded resources
+def test_bat_web_012(homeweb):
     lang_prefix = "" if homeweb.language.lower() == "en" else f"/{homeweb.language}"
 
     resource_1_target = homeweb.base_url + lang_prefix + "/summertime-and-your-health?embedded"

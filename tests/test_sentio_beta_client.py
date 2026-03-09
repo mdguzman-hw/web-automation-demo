@@ -4,13 +4,13 @@ from selenium.webdriver.common.by import By
 
 
 # TEST: Navigate Sentio Beta - Client
-def test_bat_web_012(sentio_beta_client):
+def test_bat_web_014(sentio_beta_client):
     sentio_beta_client.navigate_landing()
     assert sentio_beta_client.landing_url in sentio_beta_client.current_url.lower()
 
 
 # TEST: Sentio Beta - Client Login
-def test_bat_web_013(sentio_beta_client, quantum, credentials):
+def test_bat_web_015(sentio_beta_client, quantum, credentials):
     assert sentio_beta_client._is_landing
     elements = sentio_beta_client.landing_elements
 
@@ -26,7 +26,7 @@ def test_bat_web_013(sentio_beta_client, quantum, credentials):
 
 
 # TEST: Start Program
-def test_bat_web_014(sentio_beta_client):
+def test_bat_web_016(sentio_beta_client):
     assert sentio_beta_client._is_authenticated
 
     in_progress_programs = sentio_beta_client.in_progress_programs()
@@ -95,7 +95,7 @@ def test_bat_web_014(sentio_beta_client):
 
 
 # TEST: Continue Program
-def test_bat_web_015(sentio_beta_client):
+def test_bat_web_017(sentio_beta_client):
     assert sentio_beta_client._is_authenticated
     assert sentio_beta_client.dashboard_endpoint in sentio_beta_client.current_url.lower()
     in_progress_programs = sentio_beta_client.in_progress_programs()
@@ -115,7 +115,7 @@ def test_bat_web_015(sentio_beta_client):
 
 
 # TEST: Start Goal
-def test_bat_web_016(sentio_beta_client):
+def test_bat_web_018(sentio_beta_client):
     assert sentio_beta_client._is_authenticated
     sentio_beta_client.navigate_dashboard()
     assert sentio_beta_client.wait_for_dashboard()
@@ -140,8 +140,9 @@ def test_bat_web_016(sentio_beta_client):
     assert in_progress_module, "No in-progress module found"
     assert in_progress_module.title == sentio_beta_client.current_module
 
+
 # TEST: Continue Goal
-def test_bat_web_017(sentio_beta_client):
+def test_bat_web_019(sentio_beta_client):
     assert sentio_beta_client._is_authenticated
     assert sentio_beta_client.program_status_endpoint
 
@@ -149,7 +150,7 @@ def test_bat_web_017(sentio_beta_client):
 
 
 # TEST: Complete Goal
-def test_bat_web_018(sentio_beta_client):
+def test_bat_web_020(sentio_beta_client):
     assert sentio_beta_client._is_authenticated
 
     sentio_beta_client.complete_goal()
@@ -162,8 +163,9 @@ def test_bat_web_018(sentio_beta_client):
     assert completed_module, "Completed module not found"
     assert completed_module.status == "COMPLETED"
 
+
 # TEST: Complete Program
-def test_bat_web_019(sentio_beta_client):
+def test_bat_web_021(sentio_beta_client):
     assert sentio_beta_client._is_authenticated
     assert sentio_beta_client.program_status_endpoint
 
@@ -177,8 +179,11 @@ def test_bat_web_019(sentio_beta_client):
 
     assert all(module.status == "COMPLETED" for module in modules)
 
+
+# TODO: BAT-WEB-022 | Live Chat
+
 # TEST: Sentio Beta - Client Logout
-def test_bat_web_020(sentio_beta_client):
+def test_bat_web_023(sentio_beta_client):
     assert sentio_beta_client._is_authenticated
 
     header = sentio_beta_client.header
@@ -191,4 +196,3 @@ def test_bat_web_020(sentio_beta_client):
     # 5: Test - Logout
     header.click_element(By.CSS_SELECTOR, header_buttons["menu_sign_out"])
     assert sentio_beta_client.base_url in sentio_beta_client.current_url.lower()
-
