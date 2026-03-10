@@ -114,6 +114,7 @@ class SentioBetaClient(BasePage):
         self.click_element(By.CSS_SELECTOR, "a.btn.btn-primary")
 
     def complete_assessment(self):
+        # Loop through all assessment questions
         while "/results" not in self.current_url:
             # 1. Get currently visible question
             current_question = self.wait.until(
@@ -271,30 +272,18 @@ class SentioBetaClient(BasePage):
         )
 
     def start_goal(self):
-        # # 1: Find continue button
-        # button = self.wait.until(
-        #     expected_conditions.visibility_of_element_located((By.CLASS_NAME, "btn-primary"))
-        # )
-        #
-        # # 2. Scroll the button into view, if required
-        # self.driver.execute_script(
-        #     "arguments[0].scrollIntoView({block: 'center'});", button
-        # )
-        # self.wait.until(lambda d: button.is_displayed() and button.is_enabled())
-        # button.click()
-
-        # 3: Click button
+        # 1: Click Start button
         self.click_element(By.CLASS_NAME, "btn-primary")
         assert self.wait_for_activity_content()
 
-        # 4: First activity page is just the overview, navigate to start goal
+        # 2: First activity page is just the overview, navigate to start goal
         self.next_activity()
         assert self.wait_for_activity_content()
         self.current_module = self.wait.until(
             expected_conditions.visibility_of_element_located((By.CSS_SELECTOR, ".item-program-progress.current .item-inner .item-title"))
         ).text.strip()
 
-        # 5: Navigate back to status page by clicking table of contents link
+        # 3: Navigate back to status page by clicking table of contents link
         self.navigate_toc()
 
     def navigate_toc(self):
@@ -335,7 +324,6 @@ class SentioBetaClient(BasePage):
 
             self.wait.until(expected_conditions.url_changes(old_url))
 
-
         self.complete_goal_survey()
 
         if self.program_survey_endpoint:
@@ -346,13 +334,13 @@ class SentioBetaClient(BasePage):
         assert self.program_status_endpoint
 
     def complete_program_survey(self):
-        # Click "Finish program" button
+        # 1: Click Finish program button
         finish_btn = self.wait.until(expected_conditions.element_to_be_clickable(
             (By.CSS_SELECTOR, "button.btn-outline-muted")
         ))
         finish_btn.click()
 
-        # Hidden form is now revealed — submit it
+        # 2: Submit Form
         self.wait.until(expected_conditions.visibility_of_element_located(
             (By.CSS_SELECTOR, ".toggle-target")
         ))
@@ -370,7 +358,7 @@ class SentioBetaClient(BasePage):
 
     def complete_exercise(self):
         if "exercises/start" in self.current_url:
-            # Type A - multi-task: setup then loop tasks until next unlocks
+            # Type A Exercise - multi-task: setup then loop tasks until next unlocks
             self.setup_exercise()
             while True:
                 self.start_exercise()
@@ -394,29 +382,17 @@ class SentioBetaClient(BasePage):
                 if next_btn and "locked" not in next_btn[0].get_attribute("class"):
                     break
         else:
-            # Type B - embedded single-task: complete steps, submit navigates automatically
+            # Type B Exercise - embedded single-task: complete steps, submit navigates automatically
             self.complete_steps()
 
     def setup_exercise(self):
-        # text = "Setup Tasks" if self.language == "en" else "Tâches de configuration"
-        # self.wait.until(
-        #     expected_conditions.element_to_be_clickable(
-        #         (By.XPATH, f'//button[@type="submit" and normalize-space()="{text}"]')
-        #     )
-        # ).click()
+        # 1: Click Setup button
         self.click_element(By.CSS_SELECTOR, "button[type='submit']")
         self.wait.until(expected_conditions.url_contains("/exercises/"))
         self.wait.until(expected_conditions.url_contains("/start"))
 
     def start_exercise(self):
-        # start_button = self.wait.until(
-        #     expected_conditions.element_to_be_clickable(
-        #         (By.CSS_SELECTOR, 'a.btn.btn-primary[href*="/exercises/"][href$="/input"]')
-        #     )
-        # )
-        # self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", start_button)
-        # time.sleep(0.5)
-        # start_button.click()
+        # 1: Click Start button
         self.click_element(By.CSS_SELECTOR, 'a.btn.btn-primary[href*="/exercises/"][href$="/input"]')
         self.wait.until(expected_conditions.url_contains("/input"))
 
@@ -435,14 +411,8 @@ class SentioBetaClient(BasePage):
         select_entry_btns = self.wait.until(expected_conditions.presence_of_all_elements_located(
             (By.CSS_SELECTOR, ".modal.show .item-exercise-entry .btn-outline-muted")
         ))
-        # select_entry_btns = self.driver.find_elements(By.CSS_SELECTOR, ".modal.show .item-exercise-entry .btn-outline-muted")
         selected_entry = random.choice(select_entry_btns)
 
-        # DEBUGGING ONLY
-        # entry_item = selected_entry.find_element(By.XPATH, "./ancestor::div[contains(@class,'item-exercise-entry')]")
-        # pre_title = entry_item.find_element(By.CSS_SELECTOR, ".pre-title").text.strip()
-        # title = entry_item.find_element(By.CSS_SELECTOR, ".title").text.strip()
-        # print(f"SELECTED ENTRY: {pre_title} | {title}. Press enter to continue")
 
         self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", selected_entry)
         self.wait.until(lambda d: selected_entry.is_displayed() and selected_entry.is_enabled())
@@ -456,33 +426,38 @@ class SentioBetaClient(BasePage):
         timestamp = datetime.now().strftime("%m-%d-%Y-%H%M%S")
         base_text = f"TESTING-{timestamp}"
 
+        # Loop through all steps
         while True:
-            # --- Select previous entry if required ---
+            # 1: Check if Type C exercise - Previous entry flow
             if self.select_previous_entry():
                 continue
 
+            # 2: Locate step container
             step_container = self.wait.until(
                 expected_conditions.visibility_of_element_located(
                     (By.CSS_SELECTOR, ".container-question:not([style*='display: none'])")
                 )
             )
 
-
+            # 3: Locate example container and text and use it for input
             example_elements = step_container.find_elements(By.CSS_SELECTOR, ".question-example .text-grey-dark")
             example_text = example_elements[0].text.strip() if example_elements else ""
             full_text = f"{base_text} {example_text}"
 
+            # 4: Test: Input
             text_areas = step_container.find_elements(By.TAG_NAME, "textarea")
             if text_areas:
                 time.sleep(1)
                 text_areas[0].clear()
                 text_areas[0].send_keys(full_text)
 
+            # 5: Test: Checkbox
             checkboxes = step_container.find_elements(By.CSS_SELECTOR, "input[type='checkbox']")
             if checkboxes:
                 time.sleep(1)
                 random.choice(checkboxes).click()
 
+            # 6: Test: Submit button
             submit_buttons = step_container.find_elements(By.CSS_SELECTOR, "button[type='submit']")
             if submit_buttons:
                 self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", submit_buttons[0])
@@ -491,6 +466,7 @@ class SentioBetaClient(BasePage):
                 submit_buttons[0].click()
                 break
 
+            # 7: Test: Next button
             next_buttons = step_container.find_elements(By.CSS_SELECTOR, ".btn-next")
             if next_buttons:
                 self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", next_buttons[0])
@@ -527,17 +503,11 @@ class SentioBetaClient(BasePage):
             options = question.find_elements(By.CSS_SELECTOR, "input[type='radio']")
             # 4: Pick a random option
             choice = random.choice(options)
-            # Wait for the radio button to be clickable
+            # 5: Click option label
             label = question.find_element(By.CSS_SELECTOR, f"label[for='{choice.get_attribute('id')}']")
-            # self.wait.until(expected_conditions.element_to_be_clickable(choice))
             label.click()
 
-        # submit_button = self.wait.until(
-        #     expected_conditions.element_to_be_clickable((By.CSS_SELECTOR, "form.form-completed-survey button[type='submit']"))
-        # )
-        #
-        # submit_button.click()
-
+        # 6: Click submit button
         self.click_element(By.CSS_SELECTOR, "form.form-completed-survey button[type='submit']")
 
     def next_activity(self):
@@ -557,15 +527,7 @@ class SentioBetaClient(BasePage):
         )
         time.sleep(1)
 
-        # 3: Wait for next button to be clickable
-        # next_button = self.wait.until(
-        #     expected_conditions.element_to_be_clickable(
-        #         (By.CSS_SELECTOR, ".container-program-progress-footer .item-program-progress.next a")
-        #     )
-        # )
-        #
-        # # 4: Click next button
-        # next_button.click()
+        # 3: Click Next button
         self.click_element(By.CSS_SELECTOR, ".container-program-progress-footer .item-program-progress.next a")
 
     def withdraw_program(self, program):
@@ -587,7 +549,7 @@ class SentioBetaClient(BasePage):
         )
         time.sleep(0.5)
 
-        # 4: Click link
+        # 4: Click withdraw link
         withdraw_link.click()
 
         assert program.href_withdraw in self.current_url.lower()
@@ -610,17 +572,11 @@ class SentioBetaClient(BasePage):
             options = question.find_elements(By.CSS_SELECTOR, "input[type='radio']")
             # 4: Pick a random option
             choice = random.choice(options)
-            # Wait for the radio button to be clickable
+            # 5: Click option
             label = question.find_element(By.CSS_SELECTOR, f"label[for='{choice.get_attribute('id')}']")
-            # self.wait.until(expected_conditions.element_to_be_clickable(choice))
             label.click()
 
         self.click_element(By.CSS_SELECTOR, "form.form-goal-survey button[type='submit']")
-        # submit_button = self.wait.until(
-        #     expected_conditions.element_to_be_clickable((By.CSS_SELECTOR, "form.form-goal-survey button[type='submit']"))
-        # )
-        #
-        # submit_button.click()
 
 
 class SentioLanding:
