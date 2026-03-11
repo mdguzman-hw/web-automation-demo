@@ -2,6 +2,7 @@ import random
 import time
 
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
 
 from core.BasePage import BasePage
 from core.Constants import HOMEWEB_BASE_URL, HOMEWEB_DOMAIN, SENTIO_DOMAIN, LIFESTAGE_DOMAIN, LIFESTYLE_DOMAIN
@@ -218,7 +219,6 @@ class Homeweb(BasePage):
 
         # 5: Confirm end services
         self.wait.until(expected_conditions.url_contains("/services/end"))
-        # input("END SERVICES PAGE. Press ENTER to continue...")
         self.click_element(By.CSS_SELECTOR, "button.cancel-confirm")
 
         # 6: Complete end service survey
@@ -231,6 +231,110 @@ class Homeweb(BasePage):
             )
         )
         random.choice(radios).click()
+
+    # TODO: Implement for Sentio Beta - Client Suite once test criterias have been finalized
+    def test_live_chat(self, email):
+        # TODO: Find a stronger fail criteria. No avaialble agents message?
+        chat_btn_locator = "svelte-mffmc3"
+        email_input_locator = "inputLabel-courriel" if self.language == "fr" else "inputLabel-email"
+        begin_chat_locator = "[data-selector='PRIMARY_BUTTON']"
+
+        # 1: Locate Live Chat button and click it
+        self.wait.until(expected_conditions.element_to_be_clickable(
+            (By.CLASS_NAME, chat_btn_locator)
+        ))
+        self.click_element(By.CLASS_NAME, chat_btn_locator)
+
+        # 2: Locate iFrame window and switch to it
+        self.wait.until(
+            expected_conditions.frame_to_be_available_and_switch_to_it((By.CSS_SELECTOR, "iframe[title='Customer Chat']"))
+        )
+
+        # 3. Locate inputs
+        name_input = self.wait.until(
+            expected_conditions.visibility_of_element_located((By.ID, "inputLabel-name"))
+        )
+        assert name_input.is_displayed()
+        name_value = name_input.get_attribute("value").strip()
+
+        email_input = self.wait.until(
+            expected_conditions.visibility_of_element_located((By.ID, email_input_locator))
+        )
+        assert email_input.is_displayed()
+        email_value = email_input.get_attribute("value").strip()
+
+        # 4: Assert that name and email fields are filled out
+        if not name_value:
+            name_input.clear()
+            name_input.send_keys(email.split("@")[0])
+        print(f"NAME -> {name_value}")
+
+        if not email_value:
+            email_input.clear()
+            email_input.send_keys(email)
+        print(f"EMAIL -> {email_value}")
+
+        assert name_value != ""
+        assert email_value != ""
+
+        # 5: Assert Begin Chat button exists and click it
+        begin_chat_button = self.wait.until(
+            expected_conditions.element_to_be_clickable((By.CSS_SELECTOR, begin_chat_locator))
+        )
+        assert begin_chat_button.is_displayed()
+        self.driver.execute_script(
+            "arguments[0].scrollIntoView({block:'center'});",
+            begin_chat_button
+        )
+        self.driver.execute_script("arguments[0].click();", begin_chat_button)
+
+        # 6: Wait for chat scrollbox
+        self.wait.until(
+            expected_conditions.visibility_of_element_located((By.CSS_SELECTOR, "div.ScrollBox_content__2fOBG"))
+        )
+        print("CHAT SCROLLBOX FOUND. Waiting for agent to join the chat")
+
+        # 7: Wait for agent join system message (EN)
+        long_wait = WebDriverWait(self.driver, 180)  # 180 seconds = 3 minutes
+        agent_join_msg = long_wait.until(
+            expected_conditions.visibility_of_element_located(
+                (By.CSS_SELECTOR, "span[data-selector='SYSTEM_MESSAGE_CONTENT']")
+            )
+        )
+        assert "has joined the chat" in agent_join_msg.text.strip()
+        print("CHAT AGENT HAS JOINED.")
+
+        # 8: Wait for first agent message
+        first_agent_msg = self.wait.until(
+            expected_conditions.visibility_of_element_located(
+                (By.CSS_SELECTOR, "div[data-selector='AGENT_MESSAGE_BUBBLE'] span.Linkify")
+            )
+        )
+        print(f"CHAT AGENT FIRST REPLY CONFIRMED -> {first_agent_msg.text.strip()}. Press enter to continue...")
+
+        # 9: Locate reply textarea
+        reply_box = self.wait.until(
+            expected_conditions.element_to_be_clickable((By.CSS_SELECTOR, "textarea[data-selector='TEXTAREA']"))
+        )
+
+        # 10: Send first automated message
+        reply_box.send_keys("Automated Test Message. Please reply to confirm message has been received.\n")
+
+        # 11: Wait for agent reply
+        medium_wait = WebDriverWait(self.driver, 60)  # 60 seconds = 1 minute
+        medium_wait.until(
+            lambda driver: driver.find_elements(By.CSS_SELECTOR, "div[data-selector='AGENT_MESSAGE_BUBBLE']")[-1].text != first_agent_msg.text
+        )
+
+        # 12: Send confirmation message
+        reply_box.send_keys("Chat reply confirmed. You may now close this chat session. Thank you.\n")
+
+        # 13: Wait for chat session end
+        self.wait.until(
+            expected_conditions.visibility_of_element_located((By.CSS_SELECTOR, "div.EndSession_Footer__RE+Xe"))
+        )
+
+        input("LIVE CHAT TEST SESSION ENDED. Press enter to continue...")
 
 
 class AppointmentTile:

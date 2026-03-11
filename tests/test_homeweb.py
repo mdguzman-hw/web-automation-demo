@@ -202,6 +202,37 @@ def test_bat_web_010(homeweb, quantum, credentials):
 
 
 # TODO: BAT-WEB-011 | Live Chat
+# def test_bat_web_011(homeweb, quantum, credentials):
+#     homeweb.navigate_landing()
+#     assert homeweb.domain in homeweb.current_url.lower()
+#     header_anon = homeweb.header
+#     header_anon_buttons = header_anon.elements["buttons"]
+#     paths = header_anon.paths["buttons"]
+#
+#     # 1: Test - Sign In - Header
+#     header_anon.click_element(By.CLASS_NAME, header_anon_buttons["sign_in"])
+#     assert paths["sign_in"] in quantum.current_url.lower()
+#
+#     # 2: Test - Login - Homeweb - DSG Demo
+#     email = credentials["sentio"]["email"]
+#     quantum.login(email, credentials["sentio"]["password"])
+#     assert homeweb.wait_for_dashboard()
+#
+#     # TODO 3: Test - Live Chat
+#     homeweb.test_live_chat(email)
+#
+#     # 4: Test - Menu dropdown
+#     header_auth = homeweb.header
+#     header_auth_buttons = header_auth.elements["buttons"]
+#     header_auth.click_element(By.CLASS_NAME, header_auth_buttons["menu"])
+#     assert header_auth.wait_for_account_menu(), "Menu not found"
+#
+#     # 5: Test - Logout
+#     header_auth.click_element(By.CSS_SELECTOR, header_auth_buttons["sign_out"])
+#     assert homeweb.wait_for_logout()
+#
+#     # KNOWN ISSUE 1 - Workaround: Manually navigate back to landing (locale-aware)
+#     homeweb.navigate_landing()
 
 # TEST: Mobile - Embedded resources
 def test_bat_web_012(homeweb):
