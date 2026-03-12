@@ -10,11 +10,13 @@ from selenium.webdriver.chrome.options import Options
 
 from suites.CustomerPortal import CustomerPortal
 from suites.Homeweb import Homeweb
+from suites.HomewebBeta import HomewebBeta
 from suites.QuantumAPI import QuantumAPI
+from suites.QuantumAPIBeta import QuantumAPIBeta
 from suites.SentioBetaClient import SentioBetaClient
+from suites.SentioBetaProvider import SentioBetaProvider
 
 from suites.SentioBetaClientLegacy import SentioBetaClientLegacy
-from suites.SentioBetaProvider import SentioBetaProvider
 
 
 @pytest.fixture(scope="session")
@@ -78,6 +80,18 @@ def quantum(driver, language):
 
 
 @pytest.fixture(scope="session")
+def homeweb_beta(driver, language):
+    homeweb_beta = HomewebBeta(driver, language)
+    return homeweb_beta
+
+
+@pytest.fixture(scope="session")
+def quantum_api_beta(driver, language):
+    quantum_api_beta = QuantumAPIBeta(driver, language)
+    return quantum_api_beta
+
+
+@pytest.fixture(scope="session")
 def customer_portal(driver, language):
     portal = CustomerPortal(driver, language)
     return portal
@@ -88,10 +102,12 @@ def sentio_beta_client(driver, language):
     sentio_client = SentioBetaClient(driver, language)
     return sentio_client
 
+
 @pytest.fixture(scope="session")
 def sentio_beta_client_legacy(driver, language):
     sentio_client = SentioBetaClientLegacy(driver, language)
     return sentio_client
+
 
 @pytest.fixture(scope="session")
 def sentio_beta_provider(driver, language):
