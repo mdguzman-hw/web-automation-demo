@@ -12,7 +12,7 @@ from core.Constants import SENTIO_BETA_CLIENT_BASE_URL, SENTIO_BETA_CLIENT_DOMAI
 from core.Header import Header
 
 
-class SentioBetaClient(BasePage):
+class SentioClient(BasePage):
     # Properties
     @property
     def current_url(self):

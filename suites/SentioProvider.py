@@ -6,7 +6,7 @@ from core.Constants import SENTIO_BETA_PROVIDER_BASE_URL, SENTIO_BETA_PROVIDER_D
 from core.Header import Header
 
 
-class SentioBetaProvider(BasePage):
+class SentioProvider(BasePage):
     # Properties
     @property
     def current_url(self):
