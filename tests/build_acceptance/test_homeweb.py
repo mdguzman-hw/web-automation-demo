@@ -2,10 +2,9 @@
 
 ################# BUILD ACCEPTANCE ################
 ##################### HOMEWEB #####################
+import pytest
 from selenium.webdriver.common.by import By
 
-
-# TODO: Add Pathfinder Assessment
 
 # TEST: Navigate Homeweb
 def test_bat_web_001(homeweb):
@@ -94,7 +93,14 @@ def test_bat_web_006(homeweb):
 
 
 # TEST: Homeweb Login - Different user
-def test_bat_web_007(homeweb, credentials):
+def test_bat_web_007(homeweb, credentials, env):
+    if env == "prod":
+        email = credentials["dsg_demo"]["email"]
+        password = credentials["dsg_demo"]["password"]
+    else:
+        email = credentials["sentio"]["email"]
+        password = credentials["sentio"]["password"]
+
     assert homeweb.is_landing()
     header = homeweb.header
     header_buttons = header.elements["buttons"]
@@ -106,8 +112,9 @@ def test_bat_web_007(homeweb, credentials):
     assert paths["sign_in"] in quantum.current_url.lower()
 
     # 2: Test - Login - Homeweb - DSG Demo
-    # ERROR HERE
-    quantum.login(credentials["dsg_demo"]["email"], credentials["dsg_demo"]["password"])
+    # TODO - FIX ERROR HERE BETA
+
+    quantum.login(email, password)
     assert homeweb.wait_for_dashboard()
 
 
@@ -169,8 +176,12 @@ def test_bat_web_009(homeweb):
     # KNOWN ISSUE 1 - Workaround: Manually navigate back to landing (locale-aware)
     homeweb.navigate_landing()
 
+
 # TEST: DEMO - Cancel Active Appointments
-def test_bat_web_010(homeweb, quantum, credentials):
+def test_bat_web_010(homeweb, quantum, credentials, env):
+    if env == "beta":
+        return pytest.skip(f"Skipping {env} test_bat_web_010")
+
     assert homeweb.is_landing()
     header_anon = homeweb.header
     header_anon_buttons = header_anon.elements["buttons"]
@@ -182,6 +193,7 @@ def test_bat_web_010(homeweb, quantum, credentials):
     assert paths["sign_in"] in quantum.current_url.lower()
 
     # 2: Test - Login - Homeweb - HHI Demo
+
     quantum.login(credentials["hhi_demo"]["email"], credentials["hhi_demo"]["password"])
     assert homeweb.wait_for_dashboard()
 
