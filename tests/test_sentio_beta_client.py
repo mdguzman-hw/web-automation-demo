@@ -3,14 +3,18 @@
 from selenium.webdriver.common.by import By
 
 
+# # TEST: Reset to default frame - Runs automatically after each test
+# def teardown_method(sentio_beta_client):
+#     sentio_beta_client.reset_default_content()
+
 # TEST: Navigate Sentio Beta - Client
-def test_bat_web_014(sentio_beta_client):
+def test_bat_web_014_beta(sentio_beta_client):
     sentio_beta_client.navigate_landing()
     assert sentio_beta_client.landing_url in sentio_beta_client.current_url.lower()
 
 
 # TEST: Sentio Beta - Client Login
-def test_bat_web_015(sentio_beta_client, quantum, credentials):
+def test_bat_web_015_beta(sentio_beta_client, quantum, credentials):
     assert sentio_beta_client._is_landing
     elements = sentio_beta_client.landing_elements
 
@@ -26,7 +30,7 @@ def test_bat_web_015(sentio_beta_client, quantum, credentials):
 
 
 # TEST: Start Program
-def test_bat_web_016(sentio_beta_client):
+def test_bat_web_016_beta(sentio_beta_client):
     assert sentio_beta_client._is_authenticated
 
     # 1: Check for In Progress Programs
@@ -102,7 +106,7 @@ def test_bat_web_016(sentio_beta_client):
 
 
 # TEST: Continue Program
-def test_bat_web_017(sentio_beta_client):
+def test_bat_web_017_beta(sentio_beta_client):
     assert sentio_beta_client._is_authenticated
     assert sentio_beta_client.dashboard_endpoint in sentio_beta_client.current_url.lower()
     in_progress_programs = sentio_beta_client.in_progress_programs()
@@ -123,7 +127,7 @@ def test_bat_web_017(sentio_beta_client):
 
 
 # TEST: Start Goal
-def test_bat_web_018(sentio_beta_client):
+def test_bat_web_018_beta(sentio_beta_client):
     assert sentio_beta_client._is_authenticated
     sentio_beta_client.navigate_dashboard()
     assert sentio_beta_client.wait_for_dashboard()
@@ -151,7 +155,7 @@ def test_bat_web_018(sentio_beta_client):
 
 
 # TEST: Continue Goal
-def test_bat_web_019(sentio_beta_client):
+def test_bat_web_019_beta(sentio_beta_client):
     assert sentio_beta_client._is_authenticated
     assert sentio_beta_client.program_status_endpoint
 
@@ -159,7 +163,7 @@ def test_bat_web_019(sentio_beta_client):
 
 
 # TEST: Complete Goal
-def test_bat_web_020(sentio_beta_client):
+def test_bat_web_020_beta(sentio_beta_client):
     assert sentio_beta_client._is_authenticated
 
     sentio_beta_client.complete_goal()
@@ -188,6 +192,10 @@ def test_bat_web_021(sentio_beta_client):
 
 
 # TODO: BAT-WEB-022 | Live Chat
+# def test_bat_web_022(sentio_beta_client, credentials):
+#     assert sentio_beta_client._is_authenticated
+#     sentio_beta_client.test_live_chat(credentials["sentio"]["email"])
+
 
 # TEST: Sentio Beta - Client Logout
 def test_bat_web_023(sentio_beta_client):

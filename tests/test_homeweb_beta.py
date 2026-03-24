@@ -3,6 +3,9 @@
 from selenium.webdriver.common.by import By
 
 
+# TODO: Add Pathfinder Assessment
+
+
 # TEST: Navigate Homeweb
 def test_bat_web_001_beta(homeweb_beta):
     # 1: Test - Navigate to Homeweb landing
@@ -125,6 +128,9 @@ def test_bat_web_008_beta(homeweb_beta, quantum_api_beta, credentials):
     assert homeweb_beta.wait_for_lifestage_transfer()
 
     # 3: Test - HRA - LifeStyles transfer kickout
+    # TODO: Investigate false positive
+    # - PASS when running full Build Acceptance Suite
+    # - FAIL when running standalone Homeweb Beta Suite
     homeweb_beta.driver.get(hra_resource_target)
     assert homeweb_beta.wait_for_resource_content()
     homeweb_beta.click_element(By.CLASS_NAME, "btn-primary")

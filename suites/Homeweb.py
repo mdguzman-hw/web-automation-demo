@@ -78,19 +78,14 @@ class Homeweb(BasePage):
         )
 
     def wait_for_sentio_transfer(self):
-        return self.wait.until(
-            lambda d: SENTIO_DOMAIN in d.current_url.lower() and "/sso/token" in d.current_url.lower()
-        )
+        return self.wait.until(lambda d: SENTIO_DOMAIN in d.current_url.lower() and "/sso/token" in d.current_url.lower())
 
     def wait_for_lifestage_transfer(self):
-        return self.wait.until(
-            lambda d: LIFESTAGE_DOMAIN in d.current_url.lower()
-        )
+        return self.wait.until(lambda d: LIFESTAGE_DOMAIN in d.current_url.lower())
 
     def wait_for_lifestyle_transfer(self):
-        return self.wait.until(
-            lambda d: LIFESTYLE_DOMAIN in d.current_url.lower()
-        )
+        return self.wait.until(lambda d: LIFESTYLE_DOMAIN in d.current_url.lower())
+        # return self.wait.until(lambda d: d.execute_script("return document.readyState") == "complete")
 
     def wait_for_modal(self):
         return self.wait.until(
@@ -232,9 +227,7 @@ class Homeweb(BasePage):
         )
         random.choice(radios).click()
 
-    # TODO: Implement for Sentio Beta - Client Suite once test criterias have been finalized
     def test_live_chat(self, email):
-        # TODO: Find a stronger fail criteria. No avaialble agents message?
         chat_btn_locator = "svelte-mffmc3"
         email_input_locator = "inputLabel-courriel" if self.language == "fr" else "inputLabel-email"
         begin_chat_locator = "[data-selector='PRIMARY_BUTTON']"
@@ -294,8 +287,9 @@ class Homeweb(BasePage):
         )
         print("CHAT SCROLLBOX FOUND. Waiting for agent to join the chat")
 
-        # 7: Wait for agent join system message (EN)
-        long_wait = WebDriverWait(self.driver, 180)  # 180 seconds = 3 minutes
+        # 7: Wait for agent join system message
+        # 2 min max wait time -> Match ring central Available Agent Search Time
+        long_wait = WebDriverWait(self.driver, 120)
         agent_join_msg = long_wait.until(
             expected_conditions.visibility_of_element_located(
                 (By.CSS_SELECTOR, "span[data-selector='SYSTEM_MESSAGE_CONTENT']")
@@ -321,7 +315,7 @@ class Homeweb(BasePage):
         reply_box.send_keys("Automated Test Message. Please reply to confirm message has been received.\n")
 
         # 11: Wait for agent reply
-        medium_wait = WebDriverWait(self.driver, 60)  # 60 seconds = 1 minute
+        medium_wait = WebDriverWait(self.driver, 60)
         medium_wait.until(
             lambda driver: driver.find_elements(By.CSS_SELECTOR, "div[data-selector='AGENT_MESSAGE_BUBBLE']")[-1].text != first_agent_msg.text
         )

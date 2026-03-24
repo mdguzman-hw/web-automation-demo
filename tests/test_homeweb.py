@@ -3,6 +3,8 @@
 from selenium.webdriver.common.by import By
 
 
+# TODO: Add Pathfinder Assessment
+
 # TEST: Navigate Homeweb
 def test_bat_web_001(homeweb):
     # 1: Test - Navigate to Homeweb landing
@@ -186,7 +188,6 @@ def test_bat_web_010(homeweb, quantum, credentials):
         remaining = homeweb.get_active_appointments()
         assert not any(a.topic == topic for a in remaining)
 
-
     # 4: Test - Menu dropdown
     header_auth = homeweb.header
     header_auth_buttons = header_auth.elements["buttons"]
@@ -218,24 +219,25 @@ def test_bat_web_010(homeweb, quantum, credentials):
 #     quantum.login(email, credentials["sentio"]["password"])
 #     assert homeweb.wait_for_dashboard()
 #
-#     # TODO 3: Test - Live Chat
 #     homeweb.test_live_chat(email)
-#
-#     # 4: Test - Menu dropdown
-#     header_auth = homeweb.header
-#     header_auth_buttons = header_auth.elements["buttons"]
-#     header_auth.click_element(By.CLASS_NAME, header_auth_buttons["menu"])
-#     assert header_auth.wait_for_account_menu(), "Menu not found"
-#
-#     # 5: Test - Logout
-#     header_auth.click_element(By.CSS_SELECTOR, header_auth_buttons["sign_out"])
-#     assert homeweb.wait_for_logout()
-#
-#     # KNOWN ISSUE 1 - Workaround: Manually navigate back to landing (locale-aware)
-#     homeweb.navigate_landing()
+
 
 # TEST: Mobile - Embedded resources
 def test_bat_web_012(homeweb):
+    # Ensure Logged out from previous test
+    # if homeweb.is_authenticated():
+    #     # Test - Menu dropdown
+    #     header_auth = homeweb.header
+    #     header_auth_buttons = header_auth.elements["buttons"]
+    #     header_auth.click_element(By.CLASS_NAME, header_auth_buttons["menu"])
+    #     assert header_auth.wait_for_account_menu(), "Menu not found"
+    #
+    #     # Test - Logout
+    #     header_auth.click_element(By.CSS_SELECTOR, header_auth_buttons["sign_out"])
+    #     assert homeweb.wait_for_logout()
+
+    # KNOWN ISSUE 1 - Workaround: Manually navigate back to landing (locale-aware)
+    homeweb.navigate_landing()
     assert homeweb.is_landing()
     lang_prefix = "" if homeweb.language.lower() == "en" else f"/{homeweb.language}"
 
