@@ -1,18 +1,25 @@
 from core.BasePage import BasePage
-from core.Constants import CUSTOMER_PORTAL_BASE_URL
+from core.Constants import CUSTOMER_PORTAL_BASE_URL, CUSTOMER_PORTAL_DOMAIN
 from core.Header import Header
 from selenium.webdriver.support import expected_conditions
 
 
 class CustomerPortal(BasePage):
-    # Properties
     @property
     def current_url(self):
         return self.driver.current_url
 
-    def __init__(self, driver, language):
+    def __init__(self, driver, language, env, quantum):
         super().__init__(driver, language)
-        self.base_url = CUSTOMER_PORTAL_BASE_URL
+
+        if env == "prod":
+            self.base_url = CUSTOMER_PORTAL_BASE_URL
+            self.domain = CUSTOMER_PORTAL_DOMAIN
+        else:
+            self.base_url = CUSTOMER_PORTAL_BASE_URL
+            self.domain = CUSTOMER_PORTAL_DOMAIN
+
+        self.quantum = quantum
         self._is_authenticated = False
         self.header = None
         self.update_header()

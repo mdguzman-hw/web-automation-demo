@@ -13,14 +13,6 @@ class SentioProvider(BasePage):
         return self.driver.current_url
 
     @property
-    def base_url(self):
-        return SENTIO_BETA_PROVIDER_BASE_URL
-
-    @property
-    def domain(self):
-        return SENTIO_BETA_PROVIDER_DOMAIN
-
-    @property
     def classic_dashboard_endpoint(self):
         return "/app/" + self.language + "/sentio/v2/patients"
 
@@ -28,8 +20,17 @@ class SentioProvider(BasePage):
     def new_dashboard_endpoint(self):
         return "/app/" + self.language + "/sentio/v3/patients"
 
-    def __init__(self, driver, language):
+    def __init__(self, driver, language, env, quantum):
         super().__init__(driver, language)
+
+        if env == "prod":
+            self.base_url = SENTIO_BETA_PROVIDER_BASE_URL
+            self.domain = SENTIO_BETA_PROVIDER_DOMAIN
+        else:
+            self.base_url = SENTIO_BETA_PROVIDER_BASE_URL
+            self.domain = SENTIO_BETA_PROVIDER_DOMAIN
+
+        self.quantum = quantum
         self._is_authenticated = False
         self.header = None
         self.update_header()

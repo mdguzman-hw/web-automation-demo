@@ -10,9 +10,7 @@ from selenium.webdriver.chrome.options import Options
 
 from suites.CustomerPortal import CustomerPortal
 from suites.Homeweb import Homeweb
-from suites.HomewebBeta import HomewebBeta
 from suites.QuantumAPI import QuantumAPI
-from suites.QuantumAPIBeta import QuantumAPIBeta
 from suites.SentioClient import SentioClient
 from suites.SentioProvider import SentioProvider
 
@@ -35,19 +33,6 @@ def driver():
     driver_instance.quit()
 
 
-load_dotenv()
-
-
-@pytest.fixture(params=["prod", "beta"], ids=["PROD", "BETA"], scope="session")
-def env(request):
-    env_flag = request.config.getoption("--env")
-
-    if env_flag != "all" and request.param != env_flag:
-        pytest.skip(f"Skipping {request.param} environment")
-
-    return request.param
-
-
 def pytest_addoption(parser):
     parser.addoption(
         "--env",
@@ -55,6 +40,12 @@ def pytest_addoption(parser):
         default="all",
         help="Environment: prod | beta | all"
     )
+    # parser.addoption(
+    #     "--lang",
+    #     action="store",
+    #     default="en",
+    #     help="Language: en | fr | all"
+    # )
 
 
 def pytest_collection_modifyitems(items):
@@ -78,6 +69,19 @@ def pytest_collection_modifyitems(items):
         return env, order
 
     items.sort(key=get_group)
+
+
+@pytest.fixture(params=["prod", "beta"], ids=["PROD", "BETA"], scope="session")
+def env(request):
+    env_flag = request.config.getoption("--env")
+
+    if env_flag != "all" and request.param != env_flag:
+        pytest.skip(f"Skipping {request.param} environment")
+
+    return request.param
+
+
+load_dotenv()
 
 
 @pytest.fixture(scope="session")
@@ -108,38 +112,36 @@ def language():
 
 
 @pytest.fixture(scope="session")
-def homeweb(env, driver, language):
-    if env == "prod":
-        return Homeweb(driver, language)
-    else:
-        return HomewebBeta(driver, language)
+def quantum(driver, language, env):
+    return QuantumAPI(driver, language, env)
 
 
 @pytest.fixture(scope="session")
-def quantum(env, driver, language):
-    if env == "prod":
-        return QuantumAPI(driver, language)
-    else:
-        return QuantumAPIBeta(driver, language)
+def homeweb(driver, language, env, quantum):
+    return Homeweb(driver, language, env, quantum)
 
 
 @pytest.fixture(scope="session")
-def customer_portal(driver, language):
-    portal = CustomerPortal(driver, language)
-    return portal
+def customer_portal(driver, language, env, quantum):
+    return CustomerPortal(driver, language, env, quantum)
 
 
 @pytest.fixture(scope="session")
-def sentio_client(env, driver, language):
+def quantum_prod(driver, language):
+    return QuantumAPI(driver, language, "prod")
+
+
+@pytest.fixture(scope="session")
+def sentio_client(driver, language, env, quantum_prod):
     if env == "prod":
         return pytest.skip(f"Skipping {env} environment")
     else:
-        return SentioClient(driver, language)
+        return SentioClient(driver, language, env, quantum_prod)
 
 
 @pytest.fixture(scope="session")
-def sentio_provider(env, driver, language):
+def sentio_provider(driver, language, env, quantum_prod):
     if env == "prod":
         return pytest.skip(f"Skipping {env} environment")
     else:
-        return SentioProvider(driver, language)
+        return SentioProvider(driver, language, env, quantum_prod)

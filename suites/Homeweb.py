@@ -5,7 +5,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 
 from core.BasePage import BasePage
-from core.Constants import HOMEWEB_BASE_URL, HOMEWEB_DOMAIN, SENTIO_DOMAIN, LIFESTAGE_DOMAIN, LIFESTYLE_DOMAIN
+from core.Constants import HOMEWEB_BASE_URL, HOMEWEB_DOMAIN, SENTIO_DOMAIN, LIFESTAGE_DOMAIN, LIFESTYLE_DOMAIN, HOMEWEB_BETA_BASE_URL, HOMEWEB_BETA_DOMAIN
 from core.Header import Header
 from selenium.webdriver.support import expected_conditions
 
@@ -13,19 +13,22 @@ from core.Public import Public
 
 
 class Homeweb(BasePage):
-    # Properties
     @property
     def current_url(self):
         return self.driver.current_url
 
-    @property
-    def domain(self):
-        return HOMEWEB_DOMAIN
-
-    def __init__(self, driver, language):
+    def __init__(self, driver, language, env, quantum):
         super().__init__(driver, language)
-        self.base_url = HOMEWEB_BASE_URL
-        self.landing_url = HOMEWEB_BASE_URL + "/" + language
+
+        if env == "prod":
+            self.base_url = HOMEWEB_BASE_URL
+            self.domain = HOMEWEB_DOMAIN
+        else:
+            self.base_url = HOMEWEB_BETA_BASE_URL
+            self.domain = HOMEWEB_BETA_DOMAIN
+
+        self.quantum = quantum
+        self.landing_url = self.base_url + "/" + language
         self.public = Public.EN if language == "en" else Public.FR
         self._is_authenticated = False
         self._is_landing = False

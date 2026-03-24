@@ -2,7 +2,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions
 
 from core.BasePage import BasePage
-from core.Constants import QUANTUM_API_BASE_URL, QUANTUM_API_DOMAIN
+from core.Constants import QUANTUM_API_BASE_URL, QUANTUM_API_DOMAIN, QUANTUM_API_BETA_BASE_URL, QUANTUM_API_BETA_DOMAIN
 from core.Header import Header
 from core.Login import LoginPage
 
@@ -12,14 +12,18 @@ class QuantumAPI(BasePage):
     def current_url(self):
         return self.driver.current_url
 
-    @property
-    def domain(self):
-        return QUANTUM_API_DOMAIN
 
-    def __init__(self, driver, language):
+    def __init__(self, driver, language, env):
         super().__init__(driver, language)
-        self.base_url = QUANTUM_API_BASE_URL
-        self.driver = driver
+
+        if env == "prod":
+            self.base_url = QUANTUM_API_BASE_URL
+            self.domain = QUANTUM_API_DOMAIN
+        else:
+            self.base_url = QUANTUM_API_BETA_BASE_URL
+            self.domain = QUANTUM_API_BETA_DOMAIN
+
+        self.landing_url = self.base_url + "/" + language
         self.elements = LoginPage.EN if language == "en" else LoginPage.FR
         self._is_authenticated = False
         self.header = None

@@ -35,13 +35,15 @@ def test_bat_web_002(homeweb):
 
 
 # TEST: Homeweb Login
-def test_bat_web_003(homeweb, quantum, credentials):
+def test_bat_web_003(homeweb, credentials):
     assert homeweb.is_landing()
     buttons = homeweb.public["elements"]["buttons"]
+    quantum = homeweb.quantum
 
     # 1: Test - Sign In - Button
     homeweb.click_element(By.XPATH, buttons["sign_in"])
-    assert quantum.domain in quantum.current_url.lower()
+    print(f"MDG TESTING -> {quantum.domain}")
+    assert quantum.domain in homeweb.current_url.lower()
 
     # 2: Test - Login - Homeweb - Personal
     quantum.login(credentials["personal"]["email"], credentials["personal"]["password"])
@@ -91,22 +93,25 @@ def test_bat_web_006(homeweb):
 
 
 # TEST: Homeweb Login - Different user
-def test_bat_web_007(homeweb, quantum, credentials):
+def test_bat_web_007(homeweb, credentials):
     assert homeweb.is_landing()
     header = homeweb.header
     header_buttons = header.elements["buttons"]
     paths = header.paths["buttons"]
+    quantum = homeweb.quantum
 
     # 1: Test - Sign In - Header
     header.click_element(By.CLASS_NAME, header_buttons["sign_in"])
     assert paths["sign_in"] in quantum.current_url.lower()
 
     # 2: Test - Login - Homeweb - DSG Demo
+    # ERROR HERE
     quantum.login(credentials["dsg_demo"]["email"], credentials["dsg_demo"]["password"])
     assert homeweb.wait_for_dashboard()
 
 
 # TEST: Kickouts
+# TODO: Kickouts should click the tiles on Dashboard
 def test_bat_web_008(homeweb):
     assert homeweb.is_authenticated()
     childcare_resource_target = homeweb.base_url + "/app/" + homeweb.language + "/resources/579ba4db88db7af01fe6ddd4"
@@ -163,12 +168,13 @@ def test_bat_web_009(homeweb):
     # KNOWN ISSUE 1 - Workaround: Manually navigate back to landing (locale-aware)
     homeweb.navigate_landing()
 
-
+# TEST: DEMO - Cancel Active Appointments
 def test_bat_web_010(homeweb, quantum, credentials):
     assert homeweb.is_landing()
     header_anon = homeweb.header
     header_anon_buttons = header_anon.elements["buttons"]
     paths = header_anon.paths["buttons"]
+    quantum = homeweb.quantum
 
     # 1: Test - Sign In - Header
     header_anon.click_element(By.CLASS_NAME, header_anon_buttons["sign_in"])
@@ -222,11 +228,24 @@ def test_bat_web_010(homeweb, quantum, credentials):
 #     homeweb.test_live_chat(email)
 
 
-
+# TODO: BAT-WEB-012 | Pathfinder Assessment
+# def test_bat_web_012(homeweb, quantum, credentials):
+#     assert homeweb.is_landing()
+#     header_anon = homeweb.header
+#     header_anon_buttons = header_anon.elements["buttons"]
+#     paths = header_anon.paths["buttons"]
+#
+#     # 1: Test - Sign In - Header
+#     header_anon.click_element(By.CLASS_NAME, header_anon_buttons["sign_in"])
+#     assert paths["sign_in"] in quantum.current_url.lower()
+#
+#     # 2: Test - Login - Homeweb - HHI Demo
+#     quantum.login(credentials["hhi_demo"]["email"], credentials["hhi_demo"]["password"])
+#     assert homeweb.wait_for_dashboard()
 
 
 # TEST: Mobile - Embedded resources
-def test_bat_web_012(homeweb):
+def test_bat_web_013(homeweb):
     # Ensure Logged out from previous test
     # if homeweb.is_authenticated():
     #     # Test - Menu dropdown

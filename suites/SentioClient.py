@@ -19,16 +19,8 @@ class SentioClient(BasePage):
         return self.driver.current_url
 
     @property
-    def base_url(self):
-        return SENTIO_BETA_CLIENT_BASE_URL
-
-    @property
     def landing_url(self):
         return self.base_url + "/" + self.language
-
-    @property
-    def domain(self):
-        return SENTIO_BETA_CLIENT_DOMAIN
 
     @property
     def dashboard_endpoint(self):
@@ -50,8 +42,17 @@ class SentioClient(BasePage):
     def program_survey_endpoint(self):
         return "/survey" in self.current_url
 
-    def __init__(self, driver, language):
+    def __init__(self, driver, language, env, quantum):
         super().__init__(driver, language)
+
+        if env == "prod":
+            self.base_url = SENTIO_BETA_CLIENT_BASE_URL
+            self.domain = SENTIO_BETA_CLIENT_DOMAIN
+        else:
+            self.base_url = SENTIO_BETA_CLIENT_BASE_URL
+            self.domain = SENTIO_BETA_CLIENT_DOMAIN
+
+        self.quantum = quantum
         self._is_authenticated = False
         self._is_landing = False
         self.programs = Programs.EN if self.language == "en" else Programs.FR
