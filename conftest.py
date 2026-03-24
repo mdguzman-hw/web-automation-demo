@@ -16,8 +16,6 @@ from suites.QuantumAPIBeta import QuantumAPIBeta
 from suites.SentioBetaClient import SentioBetaClient
 from suites.SentioBetaProvider import SentioBetaProvider
 
-from suites.SentioBetaClientLegacy import SentioBetaClientLegacy
-
 
 @pytest.fixture(scope="session")
 def driver():
@@ -67,22 +65,69 @@ def language():
     return os.getenv("LANGUAGE", "en")
 
 
-@pytest.fixture(scope="session")
-def homeweb(driver, language):
-    homeweb = Homeweb(driver, language)
-    return homeweb
+# @pytest.fixture(scope="session")
+# def homeweb(driver, language):
+#     homeweb = Homeweb(driver, language)
+#     return homeweb
+
+# @pytest.fixture(scope="session")
+# def homeweb_beta(driver, language):
+#     homeweb_beta = HomewebBeta(driver, language)
+#     return homeweb_beta
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--env",
+        action="store",
+        default="all",
+        help="Environment: prod | beta | all"
+    )
+
+
+def pytest_collection_modifyitems(items):
+    def get_group(item):
+        name = item.name
+
+        import re
+        match = re.search(r"test_bat_web_(\d+)", name)
+        order = int(match.group(1)) if match else 999
+
+        # 🔥 ENV FIRST (this is the fix)
+        if "[PROD]" in name:
+            env = 0
+        elif "[BETA]" in name:
+            env = 1
+        elif "_beta" in name.lower():
+            env = 1
+        else:
+            env = 2
+
+        return (env, order)
+
+    items.sort(key=get_group)
+
+
+@pytest.fixture(params=["prod", "beta"], ids=["PROD", "BETA"], scope="session")
+def homeweb(request, driver, language):
+    env_flag = request.config.getoption("--env")
+
+    # allow filtering
+    if env_flag != "all" and request.param != env_flag:
+        pytest.skip(f"Skipping {request.param} environment")
+
+    if request.param == "prod":
+        instance = Homeweb(driver, language)
+    else:
+        instance = HomewebBeta(driver, language)
+
+    instance.env = request.param
+    return instance
 
 
 @pytest.fixture(scope="session")
 def quantum(driver, language):
     quantum = QuantumAPI(driver, language)
     return quantum
-
-
-@pytest.fixture(scope="session")
-def homeweb_beta(driver, language):
-    homeweb_beta = HomewebBeta(driver, language)
-    return homeweb_beta
 
 
 @pytest.fixture(scope="session")
@@ -100,12 +145,6 @@ def customer_portal(driver, language):
 @pytest.fixture(scope="session")
 def sentio_beta_client(driver, language):
     sentio_client = SentioBetaClient(driver, language)
-    return sentio_client
-
-
-@pytest.fixture(scope="session")
-def sentio_beta_client_legacy(driver, language):
-    sentio_client = SentioBetaClientLegacy(driver, language)
     return sentio_client
 
 
