@@ -46,6 +46,15 @@ class Homeweb(BasePage):
         self.driver.get(f"{self.base_url}/{self.language}")
         self.set_landing(True)
 
+    def navigate_dashboard(self):
+        self.click_element(By.CSS_SELECTOR, self.header.elements["buttons"]["dashboard"])
+
+    # def navigate_recommendations(self):
+    #     pathfinder_tile = self.wait.until(expected_conditions.visibility_of_element_located((By.CLASS_NAME, "item-pathfinder-recommends-v2")))
+    #     print("Pathfinder tile found")
+    #
+    #     pathfinder_link = pathfinder_tile.find_element()
+
     def go_back(self):
         self.driver.back()
         self.wait.until(
@@ -147,6 +156,16 @@ class Homeweb(BasePage):
             lambda d: self.base_url + "/en" in d.current_url.lower()
         )
 
+    def wait_for_assessment(self):
+        assessment_endpoint = "pathfinder/assessment"
+        self.wait.until(lambda d: assessment_endpoint in d.current_url.lower())
+
+        self.wait.until(
+            expected_conditions.visibility_of_element_located((By.CLASS_NAME, "section-assessment"))
+        )
+
+        return True
+
     def get_articles(self):
         # 1: Find articles container
         self.wait.until(
@@ -180,12 +199,26 @@ class Homeweb(BasePage):
 
         # 1.1: No active appointments
         if not appointments_zone:
-            print("No active appointments")
+            print("No active services")
             return []
 
         # 1.2: Retrieve active appointments
         appointment_tiles = appointments_zone[0].find_elements(By.CSS_SELECTOR, ".item-booking-v2")
         return [AppointmentTile(tile) for tile in appointment_tiles]
+
+    def get_dashboard_tiles(self):
+        # TODO: Investigate if this is expected
+        zone_length = "6" if self.language == "fr" else "8"
+        selector = f"div.collection.collection-dashboard.zone-length-{zone_length} .item"
+        tile_elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+        tiles = []
+
+        for tile in tile_elements:
+            title = tile.find_element(By.CSS_SELECTOR, ".item-content h3.title").text.strip()
+            href = tile.find_element(By.CSS_SELECTOR, ".item-content a.item-link")
+            link_text = tile.find_element(By.CSS_SELECTOR, ".item-content a.item-link").text.strip()
+            tiles.append(DashboardTile(title, href, link_text))
+        return tiles
 
     def end_services(self, topic):
         done_text = "Oui j'ai terminé" if self.language == "fr" else "Yes, I am done"
@@ -335,6 +368,77 @@ class Homeweb(BasePage):
 
         input("LIVE CHAT TEST SESSION ENDED. Press enter to continue...")
 
+    def get_current_question(self):
+        self.wait.until(
+            expected_conditions.visibility_of_element_located(
+                (By.CSS_SELECTOR, ".assessment-question-text h3")
+            )
+        )
+
+        assessment_question = self.driver.find_element(
+            By.CSS_SELECTOR,
+            ".assessment-question-text h3"
+        ).text.strip()
+
+        self.wait.until(expected_conditions.visibility_of_element_located((By.CLASS_NAME, "option")))
+        options = self.driver.find_elements(By.CLASS_NAME, "option")
+        assessment_options = []
+
+        for option in options:
+            label = option.find_element(By.CSS_SELECTOR, "button.btn-answer")
+            assessment_options.append(label)
+
+        return assessment_question, assessment_options
+
+    def answer_current_question(self, answer_text=None):
+        question, options = self.get_current_question()
+
+        if answer_text:
+            for option in options:
+                if answer_text.lower() in option.text.lower():
+                    option.click()
+                    return
+            raise Exception(f"Answer '{answer_text}' not found for question: {question}")
+        else:
+            import random
+            random.choice(options).click()
+
+    # def wait_for_next_question(self, previous_question):
+    #     self.wait.until(
+    #         lambda driver: driver.find_element(
+    #             By.CSS_SELECTOR,
+    #             ".assessment-question-text h3"
+    #         ).text.strip() != previous_question
+    #     )
+
+    def is_assessment_complete(self):
+        return "/assessment/recommendation" in self.driver.current_url
+
+    def wait_for_next_step(self, previous_question):
+        def condition():
+            # case 1: completed
+            if self.is_assessment_complete():
+                return True
+
+            # case 2: new question
+            elements = self.driver.find_elements(By.CSS_SELECTOR, ".assessment-question-text h3")
+            if elements:
+                return elements[0].text.strip() != previous_question
+            return False
+
+        self.wait.until(condition)
+
+    def complete_assessment(self):
+
+        while not self.is_assessment_complete():
+            # Can modify answer logic here (For specific flows)
+            question_text, answers = self.get_current_question()
+            print(answers[0].text.strip())
+            self.wait.until(
+                expected_conditions.element_to_be_clickable(answers[0])
+            ).click()
+            self.wait_for_next_step(question_text)
+
 
 class AppointmentTile:
     def __init__(self, tile):
@@ -351,3 +455,10 @@ class AppointmentTile:
     @property
     def provider(self):
         return self._tile.find_element(By.CSS_SELECTOR, ".column-provider-details .name").text.strip()
+
+
+class DashboardTile:
+    def __init__(self, title, href, link_text):
+        self.title = title
+        self.href = href
+        self.link_text = link_text

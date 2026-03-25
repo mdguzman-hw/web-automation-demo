@@ -241,36 +241,84 @@ def test_bat_web_010(homeweb, quantum, credentials, env):
 #     homeweb.test_live_chat(email)
 
 
-# TODO: BAT-WEB-012 | Pathfinder Assessment
-# def test_bat_web_012(homeweb, quantum, credentials):
+def test_bat_web_012(homeweb, credentials):
+    assert homeweb.is_landing()
+    header_anon = homeweb.header
+    header_anon_buttons = header_anon.elements["buttons"]
+    paths = header_anon.paths["buttons"]
+    quantum = homeweb.quantum
+
+    # 1: Test - Sign In - Header
+    header_anon.click_element(By.CLASS_NAME, header_anon_buttons["sign_in"])
+    assert paths["sign_in"] in quantum.current_url.lower()
+
+    # 2: Test - Login - Homeweb - DSG Demo
+    quantum.login(credentials["sentio"]["email"], credentials["sentio"]["password"])
+    assert homeweb.wait_for_dashboard()
+
+    # 3: Test - Check and cancel active services
+    appointments = homeweb.get_active_appointments()
+    topics = [a.topic for a in appointments]
+
+    for topic in topics:
+        homeweb.end_services(topic)
+        assert homeweb.wait_for_dashboard()
+        remaining = homeweb.get_active_appointments()
+        assert not any(a.topic == topic for a in remaining)
+
+    # TODO: Investigate if this is expected
+    # 4: Test - Retrieve Dashboard Tiles
+    expected = 6 if homeweb.language == "fr" else 8
+    dashboard_tiles = homeweb.get_dashboard_tiles()
+    assert len(dashboard_tiles) == expected
+
+    # 5: Test - Navigate Assessment
+    homeweb.click_element(By.LINK_TEXT, dashboard_tiles[0].link_text)
+    assessment_endpoint = "pathfinder/assessment"
+    assert assessment_endpoint in homeweb.current_url
+    assert homeweb.wait_for_assessment()
+
+    # 6: Test - Complete Assessment
+    homeweb.complete_assessment(
+        # answers={
+        #     0: "Work & career",
+        #     1: "Work stress"
+        # }
+    )
+    assert homeweb.is_assessment_complete()
+
+# TODO: BAT-WEB-013 | Pathfinder Booking
+# def test_bat_web_013x(homeweb, credentials):
 #     assert homeweb.is_landing()
 #     header_anon = homeweb.header
 #     header_anon_buttons = header_anon.elements["buttons"]
 #     paths = header_anon.paths["buttons"]
+#     quantum = homeweb.quantum
 #
 #     # 1: Test - Sign In - Header
 #     header_anon.click_element(By.CLASS_NAME, header_anon_buttons["sign_in"])
 #     assert paths["sign_in"] in quantum.current_url.lower()
 #
-#     # 2: Test - Login - Homeweb - HHI Demo
-#     quantum.login(credentials["hhi_demo"]["email"], credentials["hhi_demo"]["password"])
+#     # 2: Test - Login - Homeweb - DSG Demo
+#     quantum.login(credentials["sentio"]["email"], credentials["sentio"]["password"])
 #     assert homeweb.wait_for_dashboard()
+#
+#     homeweb.navigate_recommendations()
+#     assert "pathfinder/assessment/recommendation" in homeweb.current_url()
+#     input("Navigated Recommendation. Press enter to continue...")
+    # # : Test - Menu dropdown
+    # header_auth = homeweb.header
+    # header_auth_buttons = header_auth.elements["buttons"]
+    # header_auth.click_element(By.CLASS_NAME, header_auth_buttons["menu"])
+    # assert header_auth.wait_for_account_menu(), "Menu not found"
+    #
+    # # : Test - Logout
+    # header_auth.click_element(By.CSS_SELECTOR, header_auth_buttons["sign_out"])
+    # assert homeweb.wait_for_logout()
 
 
 # TEST: Mobile - Embedded resources
-def test_bat_web_013(homeweb):
-    # Ensure Logged out from previous test
-    # if homeweb.is_authenticated():
-    #     # Test - Menu dropdown
-    #     header_auth = homeweb.header
-    #     header_auth_buttons = header_auth.elements["buttons"]
-    #     header_auth.click_element(By.CLASS_NAME, header_auth_buttons["menu"])
-    #     assert header_auth.wait_for_account_menu(), "Menu not found"
-    #
-    #     # Test - Logout
-    #     header_auth.click_element(By.CSS_SELECTOR, header_auth_buttons["sign_out"])
-    #     assert homeweb.wait_for_logout()
-
+def test_bat_web_013xx(homeweb):
     # KNOWN ISSUE 1 - Workaround: Manually navigate back to landing (locale-aware)
     homeweb.navigate_landing()
     assert homeweb.is_landing()
