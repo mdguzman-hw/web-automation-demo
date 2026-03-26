@@ -1,7 +1,7 @@
 # Copyright © 2026 - Homewood Health Inc.
 
 ################# BUILD ACCEPTANCE ################
-############## SENTIO BETA - CLIENT ###############
+################# SENTIO CLIENT ###################
 from selenium.webdriver.common.by import By
 
 
@@ -9,14 +9,14 @@ from selenium.webdriver.common.by import By
 # def teardown_method(sentio_client):
 #     sentio_client.reset_default_content()
 
-# TEST: Navigate Sentio Beta - Client
-def test_bat_web_014(sentio_client):
+# TEST: Navigate Sentio Client
+def test_bat_web_017(sentio_client):
     sentio_client.navigate_landing()
     assert sentio_client.landing_url in sentio_client.current_url.lower()
 
 
-# TEST: Sentio Beta - Client Login
-def test_bat_web_015(sentio_client, quantum, credentials):
+# TEST: Sentio Client Login
+def test_bat_web_018(sentio_client, quantum, credentials):
     assert sentio_client._is_landing
     elements = sentio_client.landing_elements
 
@@ -32,7 +32,7 @@ def test_bat_web_015(sentio_client, quantum, credentials):
 
 
 # TEST: Start Program
-def test_bat_web_016(sentio_client):
+def test_bat_web_019(sentio_client):
     assert sentio_client._is_authenticated
 
     # 1: Check for In Progress Programs
@@ -108,7 +108,7 @@ def test_bat_web_016(sentio_client):
 
 
 # TEST: Continue Program
-def test_bat_web_017(sentio_client):
+def test_bat_web_020(sentio_client):
     assert sentio_client._is_authenticated
     assert sentio_client.dashboard_endpoint in sentio_client.current_url.lower()
     in_progress_programs = sentio_client.in_progress_programs()
@@ -129,7 +129,7 @@ def test_bat_web_017(sentio_client):
 
 
 # TEST: Start Goal
-def test_bat_web_018(sentio_client):
+def test_bat_web_021(sentio_client):
     assert sentio_client._is_authenticated
     sentio_client.navigate_dashboard()
     assert sentio_client.wait_for_dashboard()
@@ -157,7 +157,7 @@ def test_bat_web_018(sentio_client):
 
 
 # TEST: Continue Goal
-def test_bat_web_019(sentio_client):
+def test_bat_web_022(sentio_client):
     assert sentio_client._is_authenticated
     assert sentio_client.program_status_endpoint
 
@@ -165,7 +165,7 @@ def test_bat_web_019(sentio_client):
 
 
 # TEST: Complete Goal
-def test_bat_web_020(sentio_client):
+def test_bat_web_023(sentio_client):
     assert sentio_client._is_authenticated
 
     sentio_client.complete_goal()
@@ -180,7 +180,7 @@ def test_bat_web_020(sentio_client):
 
 
 # TEST: Complete Program
-def test_bat_web_021(sentio_client):
+def test_bat_web_024(sentio_client):
     assert sentio_client._is_authenticated
     assert sentio_client.program_status_endpoint
 
@@ -193,14 +193,14 @@ def test_bat_web_021(sentio_client):
     assert all(module.status == "COMPLETED" for module in modules)
 
 
-# TODO: BAT-WEB-022 | Live Chat
+# TODO: BAT-WEB-025 | Live Chat
 # def test_bat_web_022(sentio_client, credentials):
 #     assert sentio_client._is_authenticated
 #     sentio_client.test_live_chat(credentials["sentio"]["email"])
 
 
-# TEST: Sentio Beta - Client Logout
-def test_bat_web_023(sentio_client):
+# TEST: Sentio Client Logout
+def test_bat_web_026(sentio_client):
     assert sentio_client._is_authenticated
 
     header = sentio_client.header
