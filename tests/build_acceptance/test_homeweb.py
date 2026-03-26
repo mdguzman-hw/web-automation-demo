@@ -61,6 +61,40 @@ def test_bat_web_004(homeweb):
     assert homeweb.wait_for_resource_content()
 
 
+# TODO TEST: Resource Library
+# def test_bat_web_005x(homeweb):
+#     assert homeweb.is_authenticated()
+#
+#     # 1: Test - Retrieve Dashboard Tiles
+#     # TODO: Investigate if this is expected
+#     expected = 6 if homeweb.language == "fr" else 8
+#     dashboard_tiles = homeweb.get_dashboard_tiles()
+#     assert len(dashboard_tiles) == expected
+#
+#     # 2: Test - Navigate Resource Library
+#     homeweb.click_element(By.LINK_TEXT, dashboard_tiles[2].link_text)
+#     assert homeweb.wait_for_resources()
+#
+#     # 3: Get all primary categories and its subcategories
+#     primary_categories = homeweb.get_primary_categories()
+#     for category in primary_categories:
+#         print(category.text.strip())
+
+# for resource_category in resource_categories:
+#     print(resource_category["title"])
+#
+#     # Click category to expand and get subcategories
+#     homeweb.click_element(By.LINK_TEXT, resource_category["title"])
+#     assert homeweb.wait_for_resources()
+#
+#     resource_categories = homeweb.get_primary_categories()
+#     active_category = next(c for c in resource_categories if c["title"] == resource_category["title"])
+#     print(active_category["subcategories"])
+# for resource_category in resource_categories:
+#     print(resource_category["title"])
+#     print(resource_category["subcategories"])
+
+
 # TEST: Sentio kickout
 def test_bat_web_005(homeweb):
     assert homeweb.is_authenticated()
@@ -339,10 +373,13 @@ def test_bat_web_013(homeweb, credentials):
 
     homeweb.navigate_rating()
     assert homeweb.wait_for_rating()
+
     homeweb.complete_rating()
     assert homeweb.wait_for_booking_create()
+
     homeweb.complete_booking_create_form()
     assert homeweb.wait_for_service_confirm()
+
     homeweb.complete_service_confirm_form(email)
     assert homeweb.wait_for_booking_digest()
 
@@ -359,20 +396,20 @@ def test_bat_web_014(homeweb, credentials):
 
     homeweb.continue_booking(topics[0])
     assert homeweb.wait_for_booking_digest()
+
     homeweb.select_provider()
     assert homeweb.wait_for_booking_details()
+
     homeweb.select_booking_options()
-    # input("NAVIGATED BOOKING DETAILS. Press enter to continue...")
+    assert homeweb.wait_for_booking_confirm()
 
-    # booking_options = homeweb.get_booking_options()
+    homeweb.confirm_booking()
+    # TODO: Assert Continue to Booking button is no longer visible
+    # Booking Confirmed - Sufficient for now. See Additional Tests Below
 
-    # for option in booking_options:
-    #     print(option.provider_name)
-    #     for time in option.available_times:
-    #         print(time.text.strip())
-    # for topic in topics:
-    #     homeweb
-
+    # Additional Tests
+    # TEST: Confirmation Method
+    homeweb.choose_confirmation_method()
     # : Test - Menu dropdown
     header_auth = homeweb.header
     header_auth_buttons = header_auth.elements["buttons"]

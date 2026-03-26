@@ -234,6 +234,37 @@ class Homeweb(BasePage):
 
         return True
 
+    # TODO TEST: Resource Libraru
+    # def wait_for_resources(self):
+    #     resources_endpoint = "/resources"
+    #     self.wait.until(lambda d: resources_endpoint in d.current_url.lower())
+    #
+    #     self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
+    #
+    #     self.wait.until(
+    #         expected_conditions.visibility_of_element_located((By.CLASS_NAME, "controller-content"))
+    #     )
+    #
+    #     expected_active = "Santé mentale" if self.language == "fr" else "Mental Health"
+    #     active_item = self.driver.find_element(By.CSS_SELECTOR, "#categoryNav li.active > a").text.strip()
+    #     print (active_item)
+    #     assert expected_active in active_item
+
+        return True
+
+    def wait_for_booking_confirm(self):
+        booking_confirm_endpoint = "/homeweb/booking/confirm"
+        self.wait.until(lambda d: booking_confirm_endpoint in d.current_url.lower())
+
+        self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
+
+        self.wait.until(
+            expected_conditions.visibility_of_element_located((By.CLASS_NAME, "dsg-inner"))
+        )
+
+        return True
+
+
     def get_articles(self):
         # 1: Find articles container
         self.wait.until(
@@ -287,6 +318,24 @@ class Homeweb(BasePage):
             link_text = tile.find_element(By.CSS_SELECTOR, ".item-content a.item-link").text.strip()
             tiles.append(DashboardTile(tile, title, href, link_text))
         return tiles
+
+    def get_primary_categories(self):
+        category_elements = self.driver.find_elements(By.CSS_SELECTOR, "nav.category-nav > ul > li > a")
+        return category_elements
+        # category_element = self.wait.until(expected_conditions.presence_of_element_located((By.CSS_SELECTOR, "nav.category-nav li a")))
+
+        # categories = []
+        # primary_items = self.driver.find_elements(By.CSS_SELECTOR, "#categoryNav > ul > li")
+        #
+        # for item in primary_items:
+        #     title = item.find_element(By.CSS_SELECTOR, "a").text.strip()
+        #     subcategories = [
+        #         sub.text.strip()
+        #         for sub in item.find_elements(By.CSS_SELECTOR, ".child-nav li a")
+        #     ]
+        #     categories.append({"title": title, "subcategories": subcategories})
+        #
+        # return categories
 
     def end_services(self, topic):
         done_text = "Oui j'ai terminé" if self.language == "fr" else "Yes, I am done"
@@ -630,7 +679,7 @@ class Homeweb(BasePage):
             )
         )
         selected_time = random.choice(time_options)
-        print(selected_time)
+        print(selected_time.text.strip())
         selected_time.click()
 
         # 3: Wait for modality select to enable after time selection
@@ -643,6 +692,28 @@ class Homeweb(BasePage):
 
         # 4: Click Review & confirm
         self.click_element(By.CSS_SELECTOR, "button.btn-primary:not(.disabled)")
+
+    def confirm_booking(self):
+        self.driver.find_elements(By.CLASS_NAME, "btn-booking")
+        # for button in buttons:
+        #     print(button.text.strip())
+
+        yes_button = self.wait.until(
+            expected_conditions.element_to_be_clickable((By.CSS_SELECTOR, "div.container-buttons button"))
+        )
+
+        yes_button.click()
+
+    def choose_confirmation_method(self, method="text"):
+        self.wait.until(expected_conditions.visibility_of_element_located((By.CLASS_NAME, "container-buttons")))
+
+        buttons = self.driver.find_elements(By.CLASS_NAME, "btn-booking")
+        print(len(buttons))
+
+        # if method == "text":
+        #     buttons[0].click()
+        # else:
+        #     buttons[1].click()
 
 
 class AppointmentTile:
