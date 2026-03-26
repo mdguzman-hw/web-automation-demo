@@ -1,6 +1,8 @@
 # Copyright © 2026 - Homewood Health Inc.
 ################# SMOKE ################
 ################ HOMEWEB ###############
+from selenium.webdriver.common.by import By
+
 
 # REGISTRATION
 # TODO: SMOKE-001 | Homewood Registration - Initial State
@@ -8,9 +10,28 @@
 
 # LANDING PAGE - Homeweb Anonymouse
 # TODO: SMOKE-003	| Homeweb Landing - Initial State
+def test_smoke_homeweb_003(homeweb):
+    # 1: Test - Navigate to Homeweb landing
+    homeweb.navigate_landing()
+    assert homeweb.is_landing()
 
 # DASHBOARD
 # TODO: SMOKE-004	| Dashboard - Initial State
+def test_smoke_homeweb_004(homeweb, credentials):
+    assert homeweb.is_landing()
+    buttons = homeweb.public["elements"]["buttons"]
+    quantum = homeweb.quantum
+
+    # 1: Test - Sign In - Button
+    homeweb.click_element(By.XPATH, buttons["sign_in"])
+    assert quantum.domain in homeweb.current_url.lower()
+
+    # 2: Test - Login - Homeweb - Personal
+    # quantum.login(credentials["personal"]["email"], credentials["personal"]["password"])
+    quantum.login(credentials["sentio"]["email"], credentials["sentio"]["password"])
+    assert homeweb.wait_for_dashboard()
+
+    # TODO: Should the test assertion validate all UI elements listed in spreadsheet?
 
 # PULSECHECK
 # TODO: SMOKE-005	| Initial State
