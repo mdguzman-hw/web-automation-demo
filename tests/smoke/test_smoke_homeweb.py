@@ -31,6 +31,9 @@ def test_smoke_homeweb_004(homeweb, credentials):
     quantum.login(credentials["sentio"]["email"], credentials["sentio"]["password"])
     assert homeweb.wait_for_dashboard()
 
+    homeweb.navigate_dashboard()
+    assert homeweb.wait_for_dashboard()
+
     # TODO: Should the test assertion validate all UI elements listed in spreadsheet?
 
 # PULSECHECK
