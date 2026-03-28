@@ -44,7 +44,10 @@ class Homeweb(BasePage):
         user_type = "AUTH" if self._is_authenticated else "ANON"
         self.header = Header(self.driver, domain="homeweb", language=self.language, user=user_type)
 
-    def navigate_landing(self):
+    def navigate_landing(self, custom):
+        if custom:
+            self.driver.get(f"{self.base_url}/{self.language}/{custom}")
+
         self.driver.get(f"{self.base_url}/{self.language}")
         self.set_landing(True)
 
@@ -79,6 +82,11 @@ class Homeweb(BasePage):
 
     def is_landing(self):
         return self._is_landing
+
+    def wait_for_landing(self):
+        return self.wait.until(
+            expected_conditions.visibility_of_element_located((By.CLASS_NAME, "container-page-dynamic"))
+        )
 
     def wait_for_dashboard(self):
         expected_path = f"/app/{self.language}/homeweb/dashboard"
@@ -219,7 +227,7 @@ class Homeweb(BasePage):
         self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
 
         self.wait.until(
-            expected_conditions.visibility_of_element_located((By.CLASS_NAME, "controller-content"))
+            expected_conditions.visibility_of_element_located((By.CLASS_NAME, "collection-provider-match"))
         )
 
         return True
@@ -265,6 +273,20 @@ class Homeweb(BasePage):
         )
 
         return True
+
+    def wait_for_pulsecheck(self):
+        pulsecheck_endpoint = "wellness/pulsecheck"
+
+        self.wait.until(lambda d: pulsecheck_endpoint in d.current_url.lower())
+
+        self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
+
+        self.wait.until(
+            expected_conditions.visibility_of_element_located((By.CLASS_NAME, "pulsecheck-slide"))
+        )
+
+        return True
+
 
     # def wait_for_booking_confirmation(self):
     #     booking_confirmation_endpoint = "/homeweb/booking/confirm"

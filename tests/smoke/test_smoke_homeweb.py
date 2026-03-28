@@ -1,6 +1,7 @@
 # Copyright © 2026 - Homewood Health Inc.
 ################# SMOKE ################
 ################ HOMEWEB ###############
+import pytest
 from selenium.webdriver.common.by import By
 
 
@@ -9,16 +10,19 @@ from selenium.webdriver.common.by import By
 # TODO: SMOKE-002	| Create an account
 
 # LANDING PAGE - Homeweb Anonymouse
-# TODO: SMOKE-003	| Homeweb Landing - Initial State
+# TEST: Homeweb Landing - Initial State
 def test_smoke_homeweb_003(homeweb):
     # 1: Test - Navigate to Homeweb landing
     homeweb.navigate_landing()
     assert homeweb.is_landing()
+    assert homeweb.wait_for_landing()
+
 
 # DASHBOARD
-# TODO: SMOKE-004	| Dashboard - Initial State
+# TEST: Dashboard - Initial State
 def test_smoke_homeweb_004(homeweb, credentials):
     assert homeweb.is_landing()
+    assert homeweb.wait_for_landing()
     buttons = homeweb.public["elements"]["buttons"]
     quantum = homeweb.quantum
 
@@ -36,32 +40,87 @@ def test_smoke_homeweb_004(homeweb, credentials):
 
     # TODO: Should the test assertion validate all UI elements listed in spreadsheet?
 
+
 # PULSECHECK
-# TODO: SMOKE-005	| Initial State
-# TODO: SMOKE-006	| PulseCheck Reccommendation - Check In
+# TEST: Pulsecheck - Initial State
+def test_smoke_homeweb_005(homeweb, credentials):
+    assert homeweb.is_authenticated()
+    assert homeweb.wait_for_dashboard()
+
+    # 1: Test - Retrieve Dashboard Tiles
+    # TODO: Investigate if this is expected
+    expected = 6 if homeweb.language == "fr" else 8
+    dashboard_tiles = homeweb.get_dashboard_tiles()
+    assert len(dashboard_tiles) == expected
+
+    # 2: Test - Navigate Wellness
+    wellness_tile = dashboard_tiles[3]
+    wellness_tile.navigate()
+    assert homeweb.wait_for_pulsecheck()
+    # TODO: Should the test assertion validate all UI elements listed in spreadsheet?
+
+
+# TEST: Pulsecheck Recommendation - Check In
+def test_smoke_homeweb_006(homeweb):
+    pytest.skip("Skipping for now")
+    assert homeweb.is_authenticated()
+    assert homeweb.wait_for_pulsecheck()
+
+    # TODO: Navigate through header
+
+    # TODO: Click Check-In
+
+    # TODO Test - Pulse Check
+    homeweb.complete_pulsecheck()
+
+    # TODO Test - Mood Check
+    homeweb.complete_moodcheck()
+
 
 # PATHFINDER
-# TODO: SMOKE-007	| Initial State
-# TODO: SMOKE-008	| Launch Pathfinder
-# TODO: SMOKE-009	| Assessment Start
-# TODO: SMOKE-010	| 5 star rating pages
-# TODO: SMOKE-011	| Intake questions
-# TODO: SMOKE-012	| Booking calendar
-# TODO: SMOKE-013	| Booking calendar
-# TODO: SMOKE-014	| More options
-# TODO: SMOKE-015	| Booking calendar
-# TODO: SMOKE-016	| Booking calendar
+# TEST: Pathfinder - Initial State
+def test_smoke_homeweb_007(homeweb):
+    assert homeweb.is_authenticated()
+    homeweb.navigate_dashboard()
+    assert homeweb.wait_for_dashboard()
 
-# LANDING PAGE - Other
-# TODO: SMOKE-017	| Enbridge Landing - Initial State
-# TODO: SMOKE-018	| Suncor Landing - Initial State
-# TODO: SMOKE-019	| LSO Landing- Initial State
-# TODO: SMOKE-020	| EQ Landing- Initial State
-# TODO: SMOKE-021	| ALUMNI Landing- Initial State
-# TODO: SMOKE-022	| Pacific Blue Cross Landing- Initial State
+    expected = 6 if homeweb.language == "fr" else 8
+    dashboard_tiles = homeweb.get_dashboard_tiles()
+    assert len(dashboard_tiles) == expected
 
-# RESOURCES
-# TODO: SMOKE-023	| External redirects for homeweb
+    # 1: Test - Check and cancel active services
+    appointments = homeweb.get_active_services()
+    topics = [a.topic for a in appointments]
+
+    for topic in topics:
+        homeweb.end_services(topic)
+        assert homeweb.wait_for_dashboard()
+        remaining = homeweb.get_active_services()
+        assert not any(a.topic == topic for a in remaining)
+
+    # 2: Test - Navigate Wellness
+    assert homeweb.wait_for_dashboard()
+    pathfinder_tile = dashboard_tiles[0]
+    pathfinder_tile.navigate()
+    assert homeweb.wait_for_assessment()
+
+
+# TEST: Launch Pathfinder - Same as 007 ???
+def test_smoke_homeweb_008(homeweb):
+    pytest.skip("Skipping for now")
+    assert homeweb.is_authenticated()
+    homeweb.navigate_dashboard()
+    assert homeweb.wait_for_dashboard()
+
+    expected = 6 if homeweb.language == "fr" else 8
+    dashboard_tiles = homeweb.get_dashboard_tiles()
+    assert len(dashboard_tiles) == expected
+
+    # 2: Test - Navigate Wellness
+    pathfinder_tile = dashboard_tiles[0]
+    pathfinder_tile.navigate()
+    assert homeweb.wait_for_assessment()
+
 # TODO: SMOKE-024	| External redirects for homeweb LSO
 # TODO: SMOKE-025	| External redirects for homeweb Enbridge
 # TODO: SMOKE-026	| External redirects for homeweb EQ
