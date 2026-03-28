@@ -121,6 +121,85 @@ def test_smoke_homeweb_008(homeweb):
     pathfinder_tile.navigate()
     assert homeweb.wait_for_assessment()
 
+
+# TEST: Assessment Start
+def test_smoke_homeweb_009(homeweb):
+    assert homeweb.is_authenticated()
+    assert homeweb.wait_for_assessment()
+
+    homeweb.complete_assessment()
+    assert homeweb.is_assessment_complete()
+
+
+# TEST: 5 star rating pages
+def test_smoke_homeweb_010(homeweb):
+    assert homeweb.is_authenticated()
+    homeweb.navigate_dashboard()
+    assert homeweb.wait_for_dashboard()
+
+    homeweb.navigate_recommendations()
+    assert homeweb.wait_for_recommendation()
+
+    homeweb.navigate_rating()
+    assert homeweb.wait_for_rating()
+
+    homeweb.complete_rating()
+    assert homeweb.wait_for_booking_create()
+
+
+# TEST: Intake questions
+def test_smoke_homeweb_011(homeweb, credentials):
+    assert homeweb.is_authenticated()
+    assert homeweb.wait_for_booking_create()
+    email = credentials["sentio"]["email"]
+
+    homeweb.complete_booking_create_form()
+    assert homeweb.wait_for_service_confirm()
+
+    homeweb.complete_service_confirm_form(email)
+    assert homeweb.wait_for_booking_digest()
+
+
+# TEST: Booking calendar
+def test_smoke_homeweb_012(homeweb):
+    homeweb.navigate_dashboard()
+    assert homeweb.wait_for_dashboard()
+
+    # 1: Test - Check Active Services
+    appointments = homeweb.get_active_services()
+    topics = [a.topic for a in appointments]
+    print(topics)
+
+    # 2: Test - Continue booking for first appointment available
+    homeweb.continue_booking(topics[0])
+    assert homeweb.wait_for_booking_digest()
+
+    # 3: Test - Select
+    homeweb.select_provider()
+    assert homeweb.wait_for_booking_details()
+
+    homeweb.select_booking_options()
+    assert homeweb.wait_for_booking_confirm()
+
+    homeweb.confirm_booking()
+
+
+# TODO: SMOKE-013	| Cancel
+# TODO: SMOKE-014	| More options
+# TODO: SMOKE-015	| Reschedule
+
+# TEST: End Services
+def test_smoke_homeweb_016(homeweb):
+    # 1: Test - Check and cancel active services
+    appointments = homeweb.get_active_services()
+    topics = [a.topic for a in appointments]
+
+    for topic in topics:
+        homeweb.end_services(topic)
+        assert homeweb.wait_for_dashboard()
+        remaining = homeweb.get_active_services()
+        assert not any(a.topic == topic for a in remaining)
+
 # TODO: SMOKE-024	| External redirects for homeweb LSO
 # TODO: SMOKE-025	| External redirects for homeweb Enbridge
 # TODO: SMOKE-026	| External redirects for homeweb EQ
