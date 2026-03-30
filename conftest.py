@@ -102,6 +102,10 @@ def credentials():
         "hhi_demo": {
             "email": os.getenv("HHI_DEMO_EMAIL"),
             "password": os.getenv("HHI_DEMO_PASSWORD")
+        },
+        "lso_test": {
+            "email": os.getenv("LSO_EMAIL"),
+            "password": os.getenv("LSO_PASSWORD")
         }
     }
 

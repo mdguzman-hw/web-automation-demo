@@ -47,8 +47,9 @@ class Homeweb(BasePage):
     def navigate_landing(self, custom=None):
         if custom:
             self.driver.get(f"{self.base_url}/{self.language}/{custom}")
+        else:
+            self.driver.get(f"{self.base_url}/{self.language}")
 
-        self.driver.get(f"{self.base_url}/{self.language}")
         self.set_landing(True)
 
     def navigate_dashboard(self):
@@ -302,6 +303,27 @@ class Homeweb(BasePage):
     #     )
     #
     #     return True
+
+    def complete_enbridge_login_modal(self):
+        self.wait.until(
+            expected_conditions.visibility_of_element_located((By.CLASS_NAME, "modal-content"))
+        )
+
+        buttons = self.driver.find_elements(By.CSS_SELECTOR, ".btn-block a.btn")
+        # TODO: Investigate duplicate modal-content
+        # print(len(buttons))
+        print(buttons[0].text.strip()) # United States
+        print(buttons[1].text.strip()) # Canada
+        # print(buttons[2].text.strip()) # EMPTY??
+        # print(buttons[3].text.strip()) # EMPTY??
+        # for button in buttons:
+        #     print()
+        self.wait.until(expected_conditions.element_to_be_clickable(buttons[1]))
+        buttons[1].click()
+
+
+
+
 
     def get_articles(self):
         # 1: Find articles container

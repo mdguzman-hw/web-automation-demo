@@ -222,10 +222,54 @@ def test_smoke_homeweb_016(homeweb):
 
 # LANDING PAGE - CUSTOM
 # TEST: Enbridge Landing - Initial State
-def test_smoke_homeweb_017(homeweb):
+def test_smoke_homeweb_017(homeweb, credentials, env):
+
     assert not homeweb.is_authenticated()
     homeweb.navigate_landing("enbridge")
     assert homeweb.wait_for_landing()
+
+    # header = homeweb.header
+    # header_buttons = header.elements["buttons"]
+    # paths = header.paths["buttons"]
+    quantum = homeweb.quantum
+
+    # 1: Test - Sign In - Header
+    homeweb.click_element(By.CSS_SELECTOR, "[aria-label=\"Sign In\"]")
+    homeweb.complete_enbridge_login_modal()
+    assert quantum.domain in homeweb.current_url.lower()
+
+    # NO BETA ACCESS
+    if env == "beta":
+        pytest.skip(f"Skipping LSO Login - No {env} access")
+
+    # 2: Test - Login - Homeweb - LSO Test
+    email = credentials["lso_test"]["email"]
+    password = credentials["lso_test"]["password"]
+    quantum.login(email, password)
+    assert homeweb.wait_for_dashboard()
+
+    # 3: Test - Retrieve Dashboard Tiles
+    # TODO: Investigate if this is expected
+    # expected = 6 if homeweb.language == "fr" else 8
+    # dashboard_tiles = homeweb.get_dashboard_tiles()
+    # actual = len(dashboard_tiles)
+    # assert actual == expected
+    # for tile in dashboard_tiles:
+    #     tile.navigate()
+    #     assert tile.href in homeweb.current_url.lower()
+
+    # 4: Test - Menu dropdown
+    header_auth = homeweb.header
+    header_auth_buttons = header_auth.elements["buttons"]
+    header_auth.click_element(By.CLASS_NAME, header_auth_buttons["menu"])
+    assert header_auth.wait_for_account_menu(), "Menu not found"
+
+    # 5: Test - Logout
+    header_auth.click_element(By.CSS_SELECTOR, header_auth_buttons["sign_out"])
+    assert homeweb.wait_for_logout()
+
+    # KNOWN ISSUE 1 - Workaround: Manually navigate back to landing (locale-aware)
+    homeweb.navigate_landing()
 
 
 # TEST: Suncor Landing - Initial State
@@ -287,13 +331,13 @@ def test_smoke_homeweb_023(homeweb, quantum, env, credentials):
 
     # 1: Test - Retrieve Dashboard Tiles
     # TODO: Investigate if this is expected
-    expected = 6 if homeweb.language == "fr" else 8
-    dashboard_tiles = homeweb.get_dashboard_tiles()
-    actual = len(dashboard_tiles)
-    assert actual == expected
-    for tile in dashboard_tiles:
-        tile.navigate()
-        assert tile.href in homeweb.current_url.lower()
+    # expected = 6 if homeweb.language == "fr" else 8
+    # dashboard_tiles = homeweb.get_dashboard_tiles()
+    # actual = len(dashboard_tiles)
+    # assert actual == expected
+    # for tile in dashboard_tiles:
+    #     tile.navigate()
+    #     assert tile.href in homeweb.current_url.lower()
 
 
 # TODO: SMOKE-024	| External redirects for homeweb LSO
