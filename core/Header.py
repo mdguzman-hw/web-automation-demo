@@ -63,7 +63,7 @@ class HeaderHomeweb:
                 "menu": "nav-account-toggle",
                 "sign_out": "[aria-label=\"Se déconnecter\"]",
                 "dashboard": "[aria-label=\"Tableau de bord\"]",
-
+                "resources": "[aria-label=\"Ressources\"]"
             }
         },
         "paths": {
