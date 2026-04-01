@@ -55,6 +55,46 @@ class Homeweb(BasePage):
     def navigate_dashboard(self):
         self.click_element(By.CSS_SELECTOR, self.header.elements["buttons"]["dashboard"])
 
+    def navigate_resources(self):
+        self.click_element(By.CSS_SELECTOR, self.header.elements["buttons"]["resources"])
+
+    def wait_for_resources(self):
+        resources_endpoint = "/resources"
+        self.wait.until(lambda d: resources_endpoint in d.current_url.lower())
+
+        self.wait.until(
+            expected_conditions.visibility_of_element_located((By.CLASS_NAME, "col-category-sidebar"))
+        )
+
+        return True
+    def wait_for_resources(self):
+        return self.wait.until(
+            expected_conditions.visibility_of_element_located((By.CSS_SELECTOR, "nav.category-nav"))
+        )
+
+    def get_resource_categories(self):
+        self.wait.until(
+            expected_conditions.presence_of_element_located((By.CSS_SELECTOR, "nav.category-nav > ul > li > a"))
+        )
+        return self.driver.find_elements(By.CSS_SELECTOR, "nav.category-nav > ul > li > a")
+
+    def get_resource_subcategories(self):
+        return self.driver.find_elements(By.CSS_SELECTOR, "nav.category-nav .child-nav li a")
+
+    def search_resources(self, query: str):
+        search_input = self.wait.until(
+            expected_conditions.element_to_be_clickable((By.ID, "searchHomeweb"))
+        )
+        search_input.clear()
+        search_input.send_keys(query)
+        self.click_element(By.ID, "search")
+
+    def wait_for_search_results(self):
+        self.wait.until(
+            expected_conditions.visibility_of_element_located((By.CLASS_NAME, "resource-count"))
+        )
+        return True
+
     def navigate_recommendations(self):
         self.wait.until(expected_conditions.visibility_of_element_located((By.CLASS_NAME, "item-pathfinder-recommends-v2")))
         self.click_element(By.CSS_SELECTOR, "div.item-pathfinder-recommends-v2 a")

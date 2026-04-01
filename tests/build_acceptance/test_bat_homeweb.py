@@ -440,13 +440,72 @@ def test_bat_web_018(homeweb, credentials):
 
     homeweb.confirm_booking()
 
-    # : Test - Menu dropdown
+
+# TEST: Resource Library
+def test_bat_web_019(homeweb):
+    assert homeweb.is_authenticated()
+
+    # 1: Test - Navigate to Resources
+    homeweb.navigate_resources()
+    assert homeweb.wait_for_resources()
+
+    # 2: Test - Primary categories are visible
+    categories = homeweb.get_resource_categories()
+    assert len(categories) > 0
+
+
+# TEST: Primary Category
+def test_bat_web_020(homeweb):
+    assert homeweb.wait_for_resources()
+
+    # 1: Test - Click first primary category
+    categories = homeweb.get_resource_categories()
+    first_category = categories[0]
+    category_name = first_category.text.strip()
+    print(f"Category: {category_name}")
+    first_category.click()
+
+    # 2: Test - Category page loaded
+    assert homeweb.wait_for_resources()
+    # assert homeweb.wait_for_resource_content()
+
+
+# TEST: Subcategory
+def test_bat_web_021(homeweb):
+    assert homeweb.wait_for_resources()
+
+    # 1: Test - Get subcategories from active primary category
+    subcategories = homeweb.get_resource_subcategories()
+    assert len(subcategories) > 0
+
+    # 2: Test - Click first subcategory
+    first_subcategory = subcategories[0]
+    subcategory_name = first_subcategory.text.strip()
+    print(f"Subcategory: {subcategory_name}")
+    first_subcategory.click()
+
+    # 3: Test - Subcategory page loaded
+    assert homeweb.wait_for_resources()
+    # assert homeweb.wait_for_resource_content()
+
+
+# TEST: Search
+def test_bat_web_022(homeweb):
+    assert homeweb.is_authenticated()
+
+    # 1: Test - Navigate to resources
+    homeweb.navigate_resources()
+    assert homeweb.wait_for_resources()
+
+    # 2: Test - Perform search
+    homeweb.search_resources("mental health")
+    assert homeweb.wait_for_search_results()
+
+    # 3: Test - Logout
     header_auth = homeweb.header
     header_auth_buttons = header_auth.elements["buttons"]
     header_auth.click_element(By.CLASS_NAME, header_auth_buttons["menu"])
     assert header_auth.wait_for_account_menu(), "Menu not found"
-
-    # : Test - Logout
     header_auth.click_element(By.CSS_SELECTOR, header_auth_buttons["sign_out"])
     assert homeweb.wait_for_logout()
 

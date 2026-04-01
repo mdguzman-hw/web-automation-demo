@@ -49,7 +49,8 @@ class HeaderHomeweb:
             "buttons": {
                 "menu": "nav-account-toggle",
                 "sign_out": "[aria-label=\"Sign out\"]",
-                "dashboard": "[aria-label=\"Dashboard\"]"
+                "dashboard": "[aria-label=\"Dashboard\"]",
+                "resources": "[aria-label=\"Resources\"]"
             }
         },
         "paths": {
