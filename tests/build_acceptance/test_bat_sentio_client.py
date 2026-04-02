@@ -10,7 +10,10 @@ from selenium.webdriver.common.by import By
 #     sentio_client.reset_default_content()
 
 # TEST: Navigate Sentio Client
-def test_bat_web_025(sentio_client):
+def test_bat_web_025(sentio_client, env, record_version):
+    # 1: Test - Check version
+    record_version("Sentio Client - Beta", sentio_client.base_url, env)
+
     sentio_client.navigate_landing()
     assert sentio_client.landing_url in sentio_client.current_url.lower()
 

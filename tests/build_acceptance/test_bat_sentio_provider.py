@@ -6,7 +6,10 @@ from selenium.webdriver.common.by import By
 
 
 # TEST: Navigate Sentio Provider
-def test_bat_web_035(sentio_provider):
+def test_bat_web_035(sentio_provider, env, record_version):
+    # 1: Test - Check version
+    record_version("Sentio Provider - Beta", sentio_provider.base_url, env)
+
     sentio_provider.driver.get(sentio_provider.base_url)
     quantum = sentio_provider.quantum
     assert quantum.domain in sentio_provider.current_url.lower()

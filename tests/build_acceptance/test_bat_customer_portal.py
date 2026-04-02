@@ -6,8 +6,11 @@ from selenium.webdriver.common.by import By
 
 
 # TEST: Reports validation
-def test_bat_web_024(quantum, customer_portal, credentials):
-    # 1: Navigate to Customer Portal - Always EN
+def test_bat_web_024(quantum, customer_portal, credentials, env, record_version):
+    # 1: Test - Check version
+    record_version("Customer Portal", customer_portal.base_url, env)
+
+    # 2: Navigate to Customer Portal - Always EN
     quantum = customer_portal.quantum
     customer_portal.driver.get(customer_portal.base_url)
     assert quantum.base_url in quantum.current_url.lower()

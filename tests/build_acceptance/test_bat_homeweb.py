@@ -7,8 +7,13 @@ from selenium.webdriver.common.by import By
 
 
 # TEST: Navigate Homeweb
-def test_bat_web_001(homeweb):
-    # 1: Test - Navigate to Homeweb landing
+def test_bat_web_001(homeweb, quantum, env, record_version):
+    # 1: Test - Check versions
+    suffix = " - Beta" if env == "beta" else ""
+    record_version(f"Homeweb{suffix}", homeweb.base_url, env)
+    record_version(f"Quantum API{suffix}", quantum.base_url, env)
+
+    # 2: Test - Navigate to Homeweb landing
     homeweb.navigate_landing()
     assert homeweb.domain in homeweb.current_url.lower()
 
