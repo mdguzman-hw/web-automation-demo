@@ -189,6 +189,7 @@ def test_bat_web_031(sentio_client):
 
 
 # TEST: Complete Program
+# TODO: Complete programs other than anxiety!
 def test_bat_web_032(sentio_client):
     assert sentio_client._is_authenticated
     assert sentio_client.program_status_endpoint
