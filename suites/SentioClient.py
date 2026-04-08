@@ -299,9 +299,8 @@ class SentioClient(BasePage):
 
     def navigate_toc(self):
         toc = "Table of contents" if self.language == "en" else "Table des matières"
-        self.wait.until(expected_conditions.presence_of_element_located((By.LINK_TEXT, toc)))
-        time.sleep(1)
-        self.click_element(By.LINK_TEXT, toc)
+        if not self.program_status_endpoint:
+            self.click_element(By.LINK_TEXT, toc)
         assert self.program_status_endpoint
 
     def continue_goal(self):
