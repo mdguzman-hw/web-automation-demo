@@ -54,28 +54,29 @@ def test_smoke_homeweb_005(homeweb, credentials):
     assert len(dashboard_tiles) == expected
 
     # 2: Test - Navigate Wellness
-    wellness_tile = dashboard_tiles[3]
-    wellness_tile.navigate()
+    homeweb.navigate_pulsecheck()
     assert homeweb.wait_for_pulsecheck()
-    # TODO: Should the test assertion validate all UI elements listed in spreadsheet?
 
 
 # TEST: Pulsecheck Recommendation - Check In
 def test_smoke_homeweb_006(homeweb):
-    pytest.skip("Skipping for now -> PulseCheck Check In")
     assert homeweb.is_authenticated()
     assert homeweb.wait_for_pulsecheck()
-    # TODO-PRIORITY
 
-    # TODO: Navigate through header
+    feelings = ["excellent", "good", "gettingBy", "notGood", "inCrisis"]
 
-    # TODO: Click Check-In
+    for i, feeling in enumerate(feelings):
+        # 1: Test - Submit PulseCheck
+        homeweb.complete_pulsecheck(feeling)
 
-    # TODO Test - Pulse Check
-    homeweb.complete_pulsecheck()
+        # 2: Test - Navigate to Wellness History via header (bypasses mood check)
+        homeweb.navigate_wellness()
+        assert homeweb.wait_for_wellness_history()
 
-    # TODO Test - Mood Check
-    homeweb.complete_moodcheck()
+        # 3: Navigate back to PulseCheck for next feeling (skip on last)
+        if i < len(feelings) - 1:
+            homeweb.navigate_pulsecheck()
+            assert homeweb.wait_for_pulsecheck()
 
 
 # PATHFINDER

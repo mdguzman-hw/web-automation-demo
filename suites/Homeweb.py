@@ -5,6 +5,7 @@ import time
 from datetime import datetime
 
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.wait import WebDriverWait
 
@@ -58,6 +59,15 @@ class Homeweb(BasePage):
 
     def navigate_resources(self):
         self.click_element(By.CSS_SELECTOR, self.header.elements["buttons"]["resources"])
+
+    def navigate_wellness(self):
+        self.click_element(By.CSS_SELECTOR, self.header.elements["buttons"]["wellness"])
+
+    def navigate_pulsecheck(self):
+        self.navigate_dashboard()
+        self.wait_for_dashboard()
+        dashboard_tiles = self.get_dashboard_tiles()
+        dashboard_tiles[3].navigate()
 
     def wait_for_resources(self):
         resources_endpoint = "/resources"
@@ -353,6 +363,34 @@ class Homeweb(BasePage):
         )
 
         return True
+
+    def wait_for_wellness_history(self):
+        self.wait.until(lambda d: "wellness/history" in d.current_url.lower())
+        self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
+        self.wait.until(expected_conditions.visibility_of_element_located((By.CLASS_NAME, "container-homeweb-recent-check-ins")))
+        return True
+
+    # feeling_steps: excellent=0, good=1, gettingBy=2, notGood=3, inCrisis=4
+    FEELING_STEPS = {
+        "excellent": 0,
+        "good": 1,
+        "gettingBy": 2,
+        "notGood": 3,
+        "inCrisis": 4,
+    }
+
+    def complete_pulsecheck(self, feeling):
+        slider = self.wait.until(
+            expected_conditions.element_to_be_clickable((By.ID, "currentFeeling"))
+        )
+        slider.click()
+        slider.send_keys(Keys.HOME)
+        for _ in range(self.FEELING_STEPS[feeling]):
+            slider.send_keys(Keys.ARROW_RIGHT)
+        self.click_element(By.CSS_SELECTOR, "button.btn-continue:not(.disabled)")
+        self.wait.until(lambda d: "wellness/pulsecheck" not in d.current_url.lower())
+
+        # input("Pulsecheck completed, press enter to continue...")
 
     # def wait_for_booking_confirmation(self):
     #     booking_confirmation_endpoint = "/homeweb/booking/confirm"

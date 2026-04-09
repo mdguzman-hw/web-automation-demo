@@ -50,7 +50,8 @@ class HeaderHomeweb:
                 "menu": "nav-account-toggle",
                 "sign_out": "[aria-label=\"Sign out\"]",
                 "dashboard": "[aria-label=\"Dashboard\"]",
-                "resources": "[aria-label=\"Resources\"]"
+                "resources": "[aria-label=\"Resources\"]",
+                "wellness": "[aria-label=\"Wellness\"]"
             }
         },
         "paths": {
@@ -63,7 +64,8 @@ class HeaderHomeweb:
                 "menu": "nav-account-toggle",
                 "sign_out": "[aria-label=\"Se déconnecter\"]",
                 "dashboard": "[aria-label=\"Tableau de bord\"]",
-                "resources": "[aria-label=\"Ressources\"]"
+                "resources": "[aria-label=\"Ressources\"]",
+                "wellness": "[aria-label=\"Bien-être\"]"
             }
         },
         "paths": {
