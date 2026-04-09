@@ -845,7 +845,8 @@ class Homeweb(BasePage):
         # PROD only: handle optional Meet Now speedbump
         if self.env != "beta":
             self.wait.until(lambda d:
-                            "homeweb/meetnow" in d.current_url.lower()
+                            "homeweb/meetnow" in d.current_url.lower() or
+                            "homeweb/booking" in d.current_url.lower()
                             )
             if "homeweb/meetnow" in self.driver.current_url.lower():
                 self.click_element(By.CSS_SELECTOR, "a.btn-answer")
