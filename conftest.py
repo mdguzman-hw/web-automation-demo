@@ -150,19 +150,12 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
 
     os.makedirs("reports", exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    name_map = {
-        "test_bat_web": "bat",
-        "test_bat_homeweb": "bat_homeweb",
-        "test_bat_customer_portal": "bat_customer_portal",
-        "test_bat_sentio_client": "bat_sentio_client",
-        "test_bat_sentio_provider": "bat_sentio_provider",
-    }
     file_args = [a for a in config.invocation_params.args if a.endswith(".py")]
     if file_args:
         stem = os.path.basename(file_args[0]).replace(".py", "")
-        report_name = name_map.get(stem, stem.replace("test_", ""))
+        report_name = stem.replace("test_", "")
     else:
-        report_name = "bat"
+        report_name = "report"
     csv_path = f"reports/{report_name}_{timestamp}.csv"
 
     with open(csv_path, "w", newline="") as f:
@@ -178,7 +171,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
     terminalreporter.write_line(f"\n  Report saved: {csv_path}")
 
     if _all_results:
-        txt_path = f"reports/output_{timestamp}.txt"
+        txt_path = f"reports/{report_name}_{timestamp}.txt"
         with open(txt_path, "w") as f:
             for nodeid, phase, detail, stdout in _all_results:
                 if phase == "SKIPPED":

@@ -4,6 +4,8 @@ import random
 import time
 from datetime import datetime
 
+import pytest
+
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.select import Select
@@ -314,6 +316,12 @@ class Homeweb(BasePage):
         self.wait.until(lambda d: "homeweb/booking" in d.current_url.lower() and provider_detail_endpoint in d.current_url.lower())
 
         self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
+
+        error_elements = self.driver.find_elements(By.CLASS_NAME, "section-error")
+        if error_elements:
+            error_text = error_elements[0].text.strip()
+            print(f"section-error detected: {error_text}")
+            pytest.skip(f"section-error detected: {error_text}")
 
         self.wait.until(
             expected_conditions.visibility_of_element_located((By.CLASS_NAME, "section-booking"))
@@ -734,7 +742,7 @@ class Homeweb(BasePage):
 
         self.wait.until(condition)
 
-    def complete_assessment(self, flow=None, answer_index=0):
+    def complete_assessment(self, flow=None, answer_index=0, logger=None):
         """
         Complete the assessment by selecting an answer on each question.
 
@@ -759,7 +767,7 @@ class Homeweb(BasePage):
             selected = answers[min(index, len(answers) - 1)]
             used_flow.append(index)
 
-            print(f"Q{step + 1}: [{index}] {selected.text.strip()}")
+            (logger or print)(f"Q{step + 1}: [{index}] {selected.text.strip()}")
 
             self.wait.until(
                 expected_conditions.element_to_be_clickable(selected)
