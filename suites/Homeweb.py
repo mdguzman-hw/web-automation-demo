@@ -12,7 +12,7 @@ from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.wait import WebDriverWait
 
 from core.BasePage import BasePage
-from core.Constants import HOMEWEB_BASE_URL, HOMEWEB_DOMAIN, SENTIO_DOMAIN, LIFESTAGE_DOMAIN, LIFESTYLE_DOMAIN, HOMEWEB_BETA_BASE_URL, HOMEWEB_BETA_DOMAIN
+from core.Constants import HOMEWEB_BASE_URL, HOMEWEB_DOMAIN, SENTIO_DOMAIN, LIFESTAGE_DOMAIN, LIFESTYLE_DOMAIN, HOMEWEB_BETA_BASE_URL, HOMEWEB_BETA_DOMAIN, HOMEWEB_LOCAL_BASE_URL, HOMEWEB_LOCAL_DOMAIN
 from core.Header import Header
 from selenium.webdriver.support import expected_conditions
 
@@ -30,6 +30,9 @@ class Homeweb(BasePage):
         if env == "prod":
             self.base_url = HOMEWEB_BASE_URL
             self.domain = HOMEWEB_DOMAIN
+        elif env == "local":
+            self.base_url = HOMEWEB_LOCAL_BASE_URL
+            self.domain = HOMEWEB_LOCAL_DOMAIN
         else:
             self.base_url = HOMEWEB_BETA_BASE_URL
             self.domain = HOMEWEB_BETA_DOMAIN
@@ -122,7 +125,7 @@ class Homeweb(BasePage):
     def go_back(self):
         self.driver.back()
         self.wait.until(
-            lambda d: "homeweb.ca" in d.current_url
+            lambda d: self.domain in d.current_url
         )
         self.driver.execute_script("window.scrollBy(0, 0);")
 
@@ -151,7 +154,7 @@ class Homeweb(BasePage):
 
         self.set_authenticated(True)
 
-        self.wait.until(lambda d: HOMEWEB_DOMAIN in d.current_url.lower() and expected_path in d.current_url.lower())
+        self.wait.until(lambda d: self.domain in d.current_url.lower() and expected_path in d.current_url.lower())
         self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
         return True
 

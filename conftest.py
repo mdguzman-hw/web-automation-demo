@@ -59,6 +59,21 @@ def record_version():
     return _record
 
 
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    outcome = yield
+    rep = outcome.get_result()
+    if rep.when == "call" and rep.failed:
+        driver = item.funcargs.get("driver")
+        if driver:
+            os.makedirs("reports/screenshots", exist_ok=True)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            safe_name = rep.nodeid.replace("/", "_").replace("::", "_").replace("[", "_").replace("]", "_")
+            path = f"reports/screenshots/{safe_name}_{timestamp}.png"
+            driver.save_screenshot(path)
+            print(f"\nScreenshot saved: {path}")
+
+
 def pytest_runtest_logreport(report):
     if report.when == "setup" and report.skipped:
         phase = "skipped"
@@ -90,6 +105,8 @@ def pytest_runtest_logreport(report):
         env = "PROD"
     elif "[BETA]" in name:
         env = "BETA"
+    elif "[LOCAL]" in name:
+        env = "LOCAL"
     else:
         env = "PROD"
 
@@ -104,7 +121,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
     if not _env_results:
         return
 
-    envs = ["PROD", "BETA"]
+    envs = ["PROD", "BETA", "LOCAL"]
     results = {e: _env_results.get(e, {"passed": 0, "failed": 0, "skipped": 0}) for e in envs}
 
     total_passed = sum(r["passed"] for r in results.values())
@@ -121,26 +138,31 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
     beta_versions_str = "\n".join(
         f"{label}: {ver}" for label, ver in _versions.get("BETA", {}).items()
     )
+    local_versions_str = "\n".join(
+        f"{label}: {ver}" for label, ver in _versions.get("LOCAL", {}).items()
+    )
 
-    sep = "-" * 52
+    sep = "-" * 62
     terminalreporter.write_sep("=", "TEST REPORT")
 
     if _versions:
         prod_lines = prod_versions_str.splitlines()
         beta_lines = beta_versions_str.splitlines()
-        for i in range(max(len(prod_lines), len(beta_lines))):
+        local_lines = local_versions_str.splitlines()
+        for i in range(max(len(prod_lines), len(beta_lines), len(local_lines))):
             p = prod_lines[i] if i < len(prod_lines) else ""
             b = beta_lines[i] if i < len(beta_lines) else ""
-            terminalreporter.write_line(f"  {p:<33} {b}")
+            l = local_lines[i] if i < len(local_lines) else ""
+            terminalreporter.write_line(f"  {p:<33} {b:<20} {l}")
         terminalreporter.write_line("")
 
-    terminalreporter.write_line(f"{'Metric':<35} {'PROD':>7} {'BETA':>7}")
+    terminalreporter.write_line(f"{'Metric':<35} {'PROD':>7} {'BETA':>7} {'LOCAL':>7}")
     terminalreporter.write_line(sep)
-    terminalreporter.write_line(f"{'Passed':<35} {results['PROD']['passed']:>7} {results['BETA']['passed']:>7}")
-    terminalreporter.write_line(f"{'Failed':<35} {results['PROD']['failed']:>7} {results['BETA']['failed']:>7}")
-    terminalreporter.write_line(f"{'Not Run (Skipped, N/A, etc.)':<35} {results['PROD']['skipped']:>7} {results['BETA']['skipped']:>7}")
-    terminalreporter.write_line(f"{'Completed':<35} {results['PROD']['passed'] + results['PROD']['failed']:>7} {results['BETA']['passed'] + results['BETA']['failed']:>7}")
-    terminalreporter.write_line(f"{'Percentage Passed':<35} {_pct(results['PROD']):>7} {_pct(results['BETA']):>7}")
+    terminalreporter.write_line(f"{'Passed':<35} {results['PROD']['passed']:>7} {results['BETA']['passed']:>7} {results['LOCAL']['passed']:>7}")
+    terminalreporter.write_line(f"{'Failed':<35} {results['PROD']['failed']:>7} {results['BETA']['failed']:>7} {results['LOCAL']['failed']:>7}")
+    terminalreporter.write_line(f"{'Not Run (Skipped, N/A, etc.)':<35} {results['PROD']['skipped']:>7} {results['BETA']['skipped']:>7} {results['LOCAL']['skipped']:>7}")
+    terminalreporter.write_line(f"{'Completed':<35} {results['PROD']['passed'] + results['PROD']['failed']:>7} {results['BETA']['passed'] + results['BETA']['failed']:>7} {results['LOCAL']['passed'] + results['LOCAL']['failed']:>7}")
+    terminalreporter.write_line(f"{'Percentage Passed':<35} {_pct(results['PROD']):>7} {_pct(results['BETA']):>7} {_pct(results['LOCAL']):>7}")
     terminalreporter.write_line(sep)
     terminalreporter.write_line(f"{'Total Passed':<35} {total_passed:>7}")
     terminalreporter.write_line(f"{'Total Failed':<35} {total_failed:>7}")
@@ -160,13 +182,13 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
 
     with open(csv_path, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["Metric", "PROD", "BETA", "Total"])
-        writer.writerow(["Versions", prod_versions_str, beta_versions_str, ""])
-        writer.writerow(["Passed", results["PROD"]["passed"], results["BETA"]["passed"], total_passed])
-        writer.writerow(["Failed", results["PROD"]["failed"], results["BETA"]["failed"], total_failed])
-        writer.writerow(["Not Run (Skipped, N/A, etc.)", results["PROD"]["skipped"], results["BETA"]["skipped"], total_skipped])
-        writer.writerow(["Completed", results["PROD"]["passed"], results["BETA"]["passed"], total_completed])
-        writer.writerow(["Percentage Passed", _pct(results["PROD"]), _pct(results["BETA"]), total_pct])
+        writer.writerow(["Metric", "PROD", "BETA", "LOCAL", "Total"])
+        writer.writerow(["Versions", prod_versions_str, beta_versions_str, local_versions_str, ""])
+        writer.writerow(["Passed", results["PROD"]["passed"], results["BETA"]["passed"], results["LOCAL"]["passed"], total_passed])
+        writer.writerow(["Failed", results["PROD"]["failed"], results["BETA"]["failed"], results["LOCAL"]["failed"], total_failed])
+        writer.writerow(["Not Run (Skipped, N/A, etc.)", results["PROD"]["skipped"], results["BETA"]["skipped"], results["LOCAL"]["skipped"], total_skipped])
+        writer.writerow(["Completed", results["PROD"]["passed"], results["BETA"]["passed"], results["LOCAL"]["passed"], total_completed])
+        writer.writerow(["Percentage Passed", _pct(results["PROD"]), _pct(results["BETA"]), _pct(results["LOCAL"]), total_pct])
 
     terminalreporter.write_line(f"\n  Report saved: {csv_path}")
 
@@ -216,7 +238,7 @@ def pytest_addoption(parser):
         "--env",
         action="store",
         default="all",
-        help="Environment: prod | beta | all"
+        help="Environment: prod | beta | local | all (default: all)"
     )
     # parser.addoption(
     #     "--lang",
@@ -239,17 +261,19 @@ def pytest_collection_modifyitems(items):
             env = 0
         elif "[BETA]" in name:
             env = 1
+        elif "[LOCAL]" in name:
+            env = 2
         elif "_beta" in name.lower():
             env = 1
         else:
-            env = 2
+            env = 3
 
         return env, order
 
     items.sort(key=get_group)
 
 
-@pytest.fixture(params=["prod", "beta"], ids=["PROD", "BETA"], scope="session")
+@pytest.fixture(params=["prod", "beta", "local"], ids=["PROD", "BETA", "LOCAL"], scope="session")
 def env(request):
     env_flag = request.config.getoption("--env")
 
@@ -284,6 +308,14 @@ def credentials():
         "lso_test": {
             "email": os.getenv("LSO_EMAIL"),
             "password": os.getenv("LSO_PASSWORD")
+        },
+        "fresh_1": {
+            "email": os.getenv("FRESH_1_EMAIL"),
+            "password": os.getenv("FRESH_1_PASSWORD")
+        },
+        "fresh_2": {
+            "email": os.getenv("FRESH_2_EMAIL"),
+            "password": os.getenv("FRESH_2_PASSWORD")
         }
     }
 
