@@ -6,7 +6,7 @@ import pytest
 from selenium.webdriver.common.by import By
 
 
-# TEST: Navigate Homeweb
+# BAT-WEB-001 | Navigate Homeweb
 def test_bat_web_001(homeweb, quantum, env, record_version):
     # 1: Test - Check versions
     suffix = " - Beta" if env == "beta" else ""
@@ -18,7 +18,7 @@ def test_bat_web_001(homeweb, quantum, env, record_version):
     assert homeweb.domain in homeweb.current_url.lower()
 
 
-# TEST: Homeweb Landing Articles
+# BAT-WEB-002 | Homeweb Landing Articles
 def test_bat_web_002(homeweb):
     assert homeweb.is_landing()
     articles = homeweb.get_articles()
@@ -40,7 +40,7 @@ def test_bat_web_002(homeweb):
     homeweb.go_back()
 
 
-# TEST: Homeweb Login
+# BAT-WEB-003 | Homeweb Login
 def test_bat_web_003(homeweb, credentials):
     assert homeweb.is_landing()
     buttons = homeweb.public["elements"]["buttons"]
@@ -56,7 +56,7 @@ def test_bat_web_003(homeweb, credentials):
     assert homeweb.wait_for_dashboard()
 
 
-# TEST: Homeweb Resource
+# BAT-WEB-004 | Homeweb Resource
 def test_bat_web_004(homeweb):
     assert homeweb.is_authenticated()
 
@@ -66,7 +66,7 @@ def test_bat_web_004(homeweb):
     assert homeweb.wait_for_resource_content()
 
 
-# TEST: Sentio kickout
+# BAT-WEB-005 | Sentio kickout
 def test_bat_web_005(homeweb):
     assert homeweb.is_authenticated()
     homeweb.navigate_dashboard()
@@ -89,7 +89,7 @@ def test_bat_web_005(homeweb):
     homeweb.go_back()
 
 
-# TEST: Complete Pathfinder Assessment - Scenario 4
+# BAT-WEB-006 | Complete Pathfinder Assessment - Scenario 4
 # Employee at Homewood Health Inc (HHI Employee Program)
 # Resource ONLY
 def test_bat_web_006(homeweb, record_output):
@@ -113,7 +113,7 @@ def test_bat_web_006(homeweb, record_output):
     homeweb.assert_recommendation_scenario_1()
 
 
-# TEST: Homeweb Logout
+# BAT-WEB-007 | Homeweb Logout
 def test_bat_web_007(homeweb):
     assert homeweb.is_authenticated()
     header = homeweb.header
@@ -130,7 +130,7 @@ def test_bat_web_007(homeweb):
     homeweb.navigate_landing()
 
 
-# TEST: Homeweb Login - Different Account
+# BAT-WEB-008 | Homeweb Login - Different Account
 def test_bat_web_008(homeweb, credentials, env):
     if env == "prod":
         email = credentials["dsg_demo"]["email"]
@@ -154,7 +154,7 @@ def test_bat_web_008(homeweb, credentials, env):
     assert homeweb.wait_for_dashboard()
 
 
-# TEST: Kickouts
+# BAT-WEB-009 | Kickouts
 def test_bat_web_009(homeweb, env):
     if env == "beta":
         return pytest.skip(f"Skipping {env}. KNOWN ISSUE")
@@ -211,7 +211,7 @@ def test_bat_web_009(homeweb, env):
     assert homeweb.domain in homeweb.current_url.lower()
 
 
-# TEST: Course consent
+# BAT-WEB-010 | Course consent
 def test_bat_web_010(homeweb):
     assert homeweb.is_authenticated()
     header = homeweb.header
@@ -242,7 +242,7 @@ def test_bat_web_010(homeweb):
     homeweb.navigate_landing()
 
 
-# TEST: DEMO - Cancel Active Services
+# BAT-WEB-011 | DEMO - Cancel Active Services
 def test_bat_web_011(homeweb, quantum, credentials, env):
     if env == "prod":
         email = credentials["hhi_demo"]["email"]
@@ -291,7 +291,7 @@ def test_bat_web_011(homeweb, quantum, credentials, env):
     homeweb.navigate_landing()
 
 
-# TEST: Live Chat
+# BAT-WEB-012 | Live Chat
 def test_bat_web_012(homeweb, quantum, credentials, env):
     # Manual for now
     pytest.skip(f"Skipping Live Chat {env}. Manually testing")
@@ -314,7 +314,7 @@ def test_bat_web_012(homeweb, quantum, credentials, env):
     homeweb.test_live_chat(email)
 
 
-# TEST: Complete Pathfinder Assessment - Scenario 1
+# BAT-WEB-013 | Complete Pathfinder Assessment - Scenario 1
 # Mental Health > Anxiety > High Severity > Low Risk
 # Professional Support & Sentio iCBT
 def test_bat_web_013(homeweb, credentials, record_output):
@@ -364,7 +364,7 @@ def test_bat_web_013(homeweb, credentials, record_output):
     homeweb.assert_recommendation_scenario_2()
 
 
-# TEST: Complete Pathfinder Assessment - Scenario 2
+# BAT-WEB-014 | Complete Pathfinder Assessment - Scenario 2
 # Mental Health > Anxiety > Low Severity > Low Risk
 # Sentio iCBT ONLY
 # Same flow as BAT-WEB-012, except for this scenario, need to have started a booking already
@@ -393,7 +393,7 @@ def test_bat_web_014(homeweb, credentials, record_output):
     homeweb.assert_recommendation_scenario_4()
 
 
-# TEST: Complete Pathfinder Assessment - Scenario 3
+# BAT-WEB-015 | Complete Pathfinder Assessment - Scenario 3
 # Work & career > Anger > Low Severity > Low Risk
 # Professional Support ONLY
 def test_bat_web_015(homeweb, credentials, record_output):
@@ -418,7 +418,7 @@ def test_bat_web_015(homeweb, credentials, record_output):
     homeweb.assert_recommendation_scenario_3()
 
 
-# TEST: Create Pathfinder Booking
+# BAT-WEB-016 | Create Pathfinder Booking
 def test_bat_web_016(homeweb, credentials, env):
     assert homeweb.is_authenticated()
     email = credentials["sentio"]["email"]
@@ -444,7 +444,7 @@ def test_bat_web_016(homeweb, credentials, env):
     homeweb.complete_service_confirm_form(email)
     assert homeweb.wait_for_booking_digest()
 
-# TEST: Complete Pathfinder Booking
+# BAT-WEB-017 | Complete Pathfinder Booking
 # TODO: Ensure to select available provider!! Non-schedulable should be a different case
 def test_bat_web_017(homeweb, credentials):
     assert homeweb.is_authenticated()
@@ -468,7 +468,7 @@ def test_bat_web_017(homeweb, credentials):
 
     homeweb.confirm_booking()
 
-# TEST: Complete Pathfinder Assessment - Scenario 5
+# BAT-WEB-018 | Complete Pathfinder Assessment - Scenario 5
 # Legal flow
 # Financial Flow
 def test_bat_web_018(homeweb, credentials, record_output):
@@ -512,7 +512,7 @@ def test_bat_web_018(homeweb, credentials, record_output):
     homeweb.assert_recommendation_scenario_3()
 
 
-# TEST: Resource Library
+# BAT-WEB-019 | Resource Library
 def test_bat_web_019(homeweb):
     assert homeweb.is_authenticated()
 
@@ -525,7 +525,7 @@ def test_bat_web_019(homeweb):
     assert len(categories) > 0
 
 
-# TEST: Primary Category
+# BAT-WEB-020 | Primary Category
 def test_bat_web_020(homeweb, record_output):
     assert homeweb.wait_for_resources()
 
@@ -541,7 +541,7 @@ def test_bat_web_020(homeweb, record_output):
     # assert homeweb.wait_for_resource_content()
 
 
-# TEST: Subcategory
+# BAT-WEB-021 | Subcategory
 def test_bat_web_021(homeweb, record_output):
     assert homeweb.wait_for_resources()
 
@@ -560,7 +560,7 @@ def test_bat_web_021(homeweb, record_output):
     # assert homeweb.wait_for_resource_content()
 
 
-# TEST: Search
+# BAT-WEB-022 | Search
 def test_bat_web_022(homeweb):
     assert homeweb.is_authenticated()
 
@@ -581,7 +581,7 @@ def test_bat_web_022(homeweb):
     assert homeweb.wait_for_logout()
 
 
-# TEST: Mobile - Embedded resources
+# BAT-WEB-023 | Mobile - Embedded resources
 def test_bat_web_023(homeweb):
     # KNOWN ISSUE 1 - Workaround: Manually navigate back to landing (locale-aware)
     homeweb.navigate_landing()
