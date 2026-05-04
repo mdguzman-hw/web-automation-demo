@@ -9,7 +9,7 @@ import pytest
 from selenium.webdriver.common.by import By
 
 
-# CORE MODULES
+## CORE MODULES
 # [HOLD] - Registration
 # [DONE] Standard | DSGDEMO
 # [HOLD] MFA | Canada Post Corporation
@@ -22,20 +22,20 @@ from selenium.webdriver.common.by import By
 # [DONE] - DSGDEMO
 # [DONE] - HHI
 
-# [NEXT] Dashboard - S1
+# [P1] Dashboard - S1
 # TODO - Onboarding
 
-# [NEXT] Dashboard - S2
+# [P3] Dashboard - S2
 
-# [NEXT] Dashboard - S3
+# [P2] Dashboard - S3
 
-# [NEXT] Discover - Mental Health
-# [NEXT] Discover - Wellness
-# [NEXT] Discover - Work-Life
+# [P2] Discover - Mental Health
+# [P2] Discover - Wellness
+# [P2] Discover - Work-Life
 
-# [NEXT] Journey - Plans
-# [NEXT] Journey - Sessions
-# [NEXT] Journey - Appointments
+# [P2] Journey - Plans
+# [P2] Journey - Sessions
+# [P2] Journey - Appointments
 
 # [DONE] Smart Care Navigation
 # [DONE] - Scenario 1: Resource ONLY
@@ -45,15 +45,15 @@ from selenium.webdriver.common.by import By
 # [DONE] - Scenario 5: Legal Flow
 # [DONE] - Scenario 6: Financial Flow
 
-# [NEXT] Booking
-# [NEXT] Profile
+# [P1] Booking
+# [P1] Profile
 
 # Library
 # [DONE] - Resource Library
 # [DONE] - Primary Category
 # [DONE] - Subcategory
 
-# [DONE] Messages
+# [P3] Messages
 
 
 # BAT-WEB-001 | Navigate Homeweb
