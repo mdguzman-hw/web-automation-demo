@@ -19,6 +19,8 @@ from suites.SentioProvider import SentioProvider
 # --- Report Collection ---
 
 _run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+_date_str = _run_timestamp[4:6] + "-" + _run_timestamp[6:8] + "-" + _run_timestamp[:4]
+_reports_dir = f"reports/{_date_str}/{_run_timestamp}"
 _env_results = {}
 _versions = {}  # {"PROD": {"Homeweb": "v3.0.17.261", ...}, "BETA": {...}}
 _pending_output = {}  # {nodeid: [messages...]}
@@ -70,15 +72,12 @@ def pytest_runtest_makereport(item, call):
     if rep.when == "call" and rep.failed:
         driver = item.funcargs.get("driver")
         if driver:
-            date_str = _run_timestamp[4:6] + "-" + _run_timestamp[6:8] + "-" + _run_timestamp[:4]
-            reports_dir = f"reports/{date_str}"
-            os.makedirs(reports_dir, exist_ok=True)
-            timestamp = _run_timestamp
+            os.makedirs(_reports_dir, exist_ok=True)
             name_match = re.search(r"::(\w+)", rep.nodeid)
             test_name = name_match.group(1).replace("test_", "") if name_match else "unknown"
             env_match = re.search(r"\[(\w+)\]", rep.nodeid)
             env_tag = env_match.group(1) if env_match else ""
-            path = f"{reports_dir}/fail-{test_name}-{env_tag}_{timestamp}.png"
+            path = f"{_reports_dir}/fail-{test_name}-{env_tag}_{_run_timestamp}.png"
             driver.save_screenshot(path)
             print(f"\nScreenshot saved: {path}")
 
@@ -178,17 +177,14 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
     terminalreporter.write_line(f"{'Total Completed':<35} {total_completed:>7}")
     terminalreporter.write_line(f"{'Total Percentage Passed':<35} {total_pct:>7}")
 
-    date_str = _run_timestamp[4:6] + "-" + _run_timestamp[6:8] + "-" + _run_timestamp[:4]
-    reports_dir = f"reports/{date_str}"
-    os.makedirs(reports_dir, exist_ok=True)
-    timestamp = _run_timestamp
+    os.makedirs(_reports_dir, exist_ok=True)
     file_args = [a for a in config.invocation_params.args if a.endswith(".py")]
     if file_args:
         stem = os.path.basename(file_args[0]).replace(".py", "")
         report_name = stem.replace("test_", "")
     else:
         report_name = "report"
-    csv_path = f"{reports_dir}/{report_name}_{timestamp}.csv"
+    csv_path = f"{_reports_dir}/{_run_timestamp}_{report_name}.csv"
 
     with open(csv_path, "w", newline="") as f:
         writer = csv.writer(f)
@@ -203,7 +199,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
     terminalreporter.write_line(f"\n  Report saved: {csv_path}")
 
     if _all_results:
-        txt_path = f"{reports_dir}/{report_name}_{timestamp}.txt"
+        txt_path = f"{_reports_dir}/{_run_timestamp}_{report_name}.txt"
         with open(txt_path, "w") as f:
             for nodeid, phase, detail, stdout in _all_results:
                 if phase == "SKIPPED":
@@ -293,9 +289,9 @@ load_dotenv()
 @pytest.fixture(scope="session")
 def credentials():
     return {
-        "hhi": {
-            "email": os.getenv("HHI_EMAIL"),
-            "password": os.getenv("HHI_PASSWORD")
+        "hhi_s1": {
+            "email": os.getenv("HHI_S1_EMAIL"),
+            "password": os.getenv("HHI_S1_PASSWORD")
         },
         "hhi_personal": {
             "email": os.getenv("HHI_PERSONAL_EMAIL"),

@@ -36,11 +36,9 @@ class BasePage:
         clickable_element.click()
 
     def take_screenshot(self, name, logger=None):
-        from conftest import _run_timestamp
-        date_str = _run_timestamp[4:6] + "-" + _run_timestamp[6:8] + "-" + _run_timestamp[:4]
-        reports_dir = f"reports/{date_str}"
-        os.makedirs(reports_dir, exist_ok=True)
-        filename = f"{name}-{_run_timestamp}.png"
-        self.driver.save_screenshot(f"{reports_dir}/{filename}")
+        from conftest import _run_timestamp, _reports_dir
+        os.makedirs(_reports_dir, exist_ok=True)
+        filename = f"{_run_timestamp}_{name}.png"
+        self.driver.save_screenshot(f"{_reports_dir}/{filename}")
         if logger:
             logger(f"Screenshot saved: {filename}")
