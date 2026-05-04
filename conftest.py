@@ -18,6 +18,7 @@ from suites.SentioProvider import SentioProvider
 
 # --- Report Collection ---
 
+_run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 _env_results = {}
 _versions = {}  # {"PROD": {"Homeweb": "v3.0.17.261", ...}, "BETA": {...}}
 _pending_output = {}  # {nodeid: [messages...]}
@@ -32,9 +33,11 @@ def _pct(r):
 @pytest.fixture(scope="function")
 def record_output(request):
     nodeid = request.node.nodeid
+
     def _record(message):
         _pending_output.setdefault(nodeid, []).append(message)
         print(message)
+
     return _record
 
 
@@ -61,15 +64,21 @@ def record_version():
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):
+    import re
     outcome = yield
     rep = outcome.get_result()
     if rep.when == "call" and rep.failed:
         driver = item.funcargs.get("driver")
         if driver:
-            os.makedirs("reports/screenshots", exist_ok=True)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            safe_name = rep.nodeid.replace("/", "_").replace("::", "_").replace("[", "_").replace("]", "_")
-            path = f"reports/screenshots/{safe_name}_{timestamp}.png"
+            date_str = _run_timestamp[4:6] + "-" + _run_timestamp[6:8] + "-" + _run_timestamp[:4]
+            reports_dir = f"reports/{date_str}"
+            os.makedirs(reports_dir, exist_ok=True)
+            timestamp = _run_timestamp
+            name_match = re.search(r"::(\w+)", rep.nodeid)
+            test_name = name_match.group(1).replace("test_", "") if name_match else "unknown"
+            env_match = re.search(r"\[(\w+)\]", rep.nodeid)
+            env_tag = env_match.group(1) if env_match else ""
+            path = f"{reports_dir}/fail-{test_name}-{env_tag}_{timestamp}.png"
             driver.save_screenshot(path)
             print(f"\nScreenshot saved: {path}")
 
@@ -114,7 +123,6 @@ def pytest_runtest_logreport(report):
         _env_results[env] = {"passed": 0, "failed": 0, "skipped": 0}
 
     _env_results[env][phase] += 1
-
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
@@ -170,15 +178,17 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
     terminalreporter.write_line(f"{'Total Completed':<35} {total_completed:>7}")
     terminalreporter.write_line(f"{'Total Percentage Passed':<35} {total_pct:>7}")
 
-    os.makedirs("reports", exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    date_str = _run_timestamp[4:6] + "-" + _run_timestamp[6:8] + "-" + _run_timestamp[:4]
+    reports_dir = f"reports/{date_str}"
+    os.makedirs(reports_dir, exist_ok=True)
+    timestamp = _run_timestamp
     file_args = [a for a in config.invocation_params.args if a.endswith(".py")]
     if file_args:
         stem = os.path.basename(file_args[0]).replace(".py", "")
         report_name = stem.replace("test_", "")
     else:
         report_name = "report"
-    csv_path = f"reports/{report_name}_{timestamp}.csv"
+    csv_path = f"{reports_dir}/{report_name}_{timestamp}.csv"
 
     with open(csv_path, "w", newline="") as f:
         writer = csv.writer(f)
@@ -193,7 +203,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
     terminalreporter.write_line(f"\n  Report saved: {csv_path}")
 
     if _all_results:
-        txt_path = f"reports/{report_name}_{timestamp}.txt"
+        txt_path = f"{reports_dir}/{report_name}_{timestamp}.txt"
         with open(txt_path, "w") as f:
             for nodeid, phase, detail, stdout in _all_results:
                 if phase == "SKIPPED":
@@ -240,12 +250,6 @@ def pytest_addoption(parser):
         default="all",
         help="Environment: prod | beta | local | all (default: all)"
     )
-    # parser.addoption(
-    #     "--lang",
-    #     action="store",
-    #     default="en",
-    #     help="Language: en | fr | all"
-    # )
 
 
 def pytest_collection_modifyitems(items):
@@ -353,9 +357,7 @@ def sentio_client(driver, language, env, quantum, quantum_prod):
     if env == "prod":
         return pytest.skip(f"Skipping {env} environment")
     else:
-        # TODO: Switch back on MONDAY 03-30-2026
         return SentioClient(driver, language, env, quantum_prod)
-        # return SentioClient(driver, language, env, quantum)
 
 
 @pytest.fixture(scope="session")
@@ -364,3 +366,63 @@ def sentio_provider(driver, language, env, quantum, quantum_prod):
         return pytest.skip(f"Skipping {env} environment")
     else:
         return SentioProvider(driver, language, env, quantum_prod)
+
+
+@pytest.fixture(scope="function")
+def record_account():
+    import openpyxl
+
+    HEADERS = ["Date", "Timestamp", "Env", "Org", "Division", "Role",
+               "First Name", "Last Name", "Preferred Name", "Email", "DOB", "Password", "Marketing Opt-in"]
+    ACCOUNTS_PATH = "reports/registered-accounts.xlsx"
+
+    def _record(env, org, division, role, first_name, last_name, preferred_name, email, dob, password, marketing_opt_in):
+        os.makedirs("reports", exist_ok=True)
+        if os.path.exists(ACCOUNTS_PATH):
+            wb = openpyxl.load_workbook(ACCOUNTS_PATH)
+            ws = wb.active
+        else:
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Registered Accounts"
+            ws.append(HEADERS)
+
+        ws.append([
+            _run_timestamp[4:6] + "-" + _run_timestamp[6:8] + "-" + _run_timestamp[:4],
+            _run_timestamp,
+            env.upper(),
+            org,
+            division,
+            role,
+            first_name,
+            last_name,
+            preferred_name,
+            email,
+            dob,
+            password,
+            "Yes" if marketing_opt_in else "No",
+        ])
+        wb.save(ACCOUNTS_PATH)
+
+    return _record
+
+
+@pytest.fixture(scope="session")
+def latest_registered_account():
+    import openpyxl
+
+    ACCOUNTS_PATH = "reports/registered-accounts.xlsx"
+    HEADERS = ["Date", "Timestamp", "Env", "Org", "Division", "Role",
+               "First Name", "Last Name", "Preferred Name", "Email", "DOB", "Password", "Marketing Opt-in"]
+
+    if not os.path.exists(ACCOUNTS_PATH):
+        pytest.skip("No registered accounts found — run test_bat_web_003 first")
+
+    wb = openpyxl.load_workbook(ACCOUNTS_PATH)
+    ws = wb.active
+
+    if ws.max_row < 2:
+        pytest.skip("No registered accounts found — run test_bat_web_003 first")
+
+    values = [ws.cell(row=ws.max_row, column=i + 1).value for i in range(len(HEADERS))]
+    return dict(zip(HEADERS, values))

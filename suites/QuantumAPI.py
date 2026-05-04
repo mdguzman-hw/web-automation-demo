@@ -69,3 +69,90 @@ class QuantumAPI(BasePage):
     def wait_for_password(self):
         xpath = self.elements["elements"]["inputs"]["password"]
         return self.wait.until(expected_conditions.visibility_of_element_located((By.XPATH, xpath)))
+
+    def wait_for_url_path(self, path):
+        return self.wait.until(
+            expected_conditions.url_contains(path)
+        )
+
+    def navigate_registration(self, program_id):
+        self.driver.get(f"{self.base_url}/{self.language}/register/{program_id}")
+
+    def wait_for_org_search(self):
+        return self.wait.until(
+            expected_conditions.visibility_of_element_located((By.ID, "orgSearch"))
+        )
+
+    def search_org(self, query):
+        field = self.wait.until(
+            expected_conditions.element_to_be_clickable((By.ID, "orgSearch"))
+        )
+        field.clear()
+        field.send_keys(query)
+
+    def wait_for_org_results(self):
+        return self.wait.until(
+            expected_conditions.visibility_of_element_located(
+                (By.CSS_SELECTOR, "#orgResults .list[role='listbox']")
+            )
+        )
+
+    def select_org(self, org_name):
+        self.click_element(
+            By.XPATH,
+            f"//a[@role='option']//span[@class='name' and normalize-space()='{org_name}']/.."
+        )
+
+    def wait_for_role_selection(self):
+        return self.wait.until(
+            expected_conditions.visibility_of_element_located(
+                (By.CSS_SELECTOR, "div.reg-roles[role='radiogroup']")
+            )
+        )
+
+    def select_role(self, role):
+        locator = (By.XPATH, f"//input[@data-role='{role}']/parent::label")
+        self.wait.until(expected_conditions.element_to_be_clickable(locator)).click()
+
+    def continue_registration(self):
+        self.click_element(By.CSS_SELECTOR, "button[type='submit'].btn-primary")
+
+    def continue_from_verify(self):
+        self.click_element(By.XPATH, "//button[contains(normalize-space(), 'Continue')]")
+
+    def wait_for_registration_details(self):
+        return self.wait.until(
+            expected_conditions.visibility_of_element_located((By.ID, "firstName"))
+        )
+
+    def fill_password_form(self, password, marketing_opt_in=False):
+        for field_id, value in [("password", password), ("confirmPassword", password)]:
+            field = self.wait.until(expected_conditions.element_to_be_clickable((By.ID, field_id)))
+            field.clear()
+            field.send_keys(value)
+
+        toggle = self.driver.find_element(By.CSS_SELECTOR, "input[name='marketingOptIn']")
+        if toggle.is_selected() != marketing_opt_in:
+            self.click_element(By.CSS_SELECTOR, "label.reg-toggle span.track")
+
+        self.click_element(By.CSS_SELECTOR, "button[type='submit'].btn-primary")
+
+    def enter_email_verification_code(self, code):
+        for i, digit in enumerate(code):
+            field = self.wait.until(
+                expected_conditions.element_to_be_clickable((By.ID, f"emailCodeDigit{i}"))
+            )
+            field.clear()
+            field.send_keys(digit)
+        self.click_element(By.CSS_SELECTOR, "button[type='submit'].btn-primary")
+
+    def fill_registration_details(self, first_name, last_name, preferred_name, email, dob):
+        for field_id, value in [("firstName", first_name), ("lastName", last_name), ("preferredName", preferred_name), ("email", email)]:
+            field = self.wait.until(expected_conditions.element_to_be_clickable((By.ID, field_id)))
+            field.clear()
+            field.send_keys(value)
+
+        dob_field = self.driver.find_element(By.ID, "dob")
+        self.driver.execute_script("arguments[0].value = arguments[1];", dob_field, dob)
+
+        self.click_element(By.CSS_SELECTOR, "label.reg-toggle span.track")
