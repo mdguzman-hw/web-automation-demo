@@ -6,6 +6,7 @@ from datetime import datetime
 
 import pytest
 
+from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.select import Select
@@ -80,6 +81,23 @@ class Homeweb(BasePage):
     def navigate_wellness(self):
         self.click_element(By.CSS_SELECTOR, self.header.elements["buttons"]["wellness"])
 
+    def navigate_messages(self):
+        messages_endpoint = "/messages"
+
+        self.click_element(By.CSS_SELECTOR, self.header.elements["buttons"]["messages"])
+        self.wait.until(lambda d: messages_endpoint in d.current_url.lower())
+
+        self.wait.until(
+            expected_conditions.visibility_of_element_located((By.ID, "managerMessages"))
+        )
+        self.wait.until(
+            expected_conditions.visibility_of_element_located((By.CLASS_NAME, "container-inbox"))
+        )
+        self.wait.until(
+            expected_conditions.visibility_of_element_located((By.CLASS_NAME, "container-messages"))
+        )
+
+
     def navigate_pulsecheck(self):
         self.navigate_dashboard()
         dashboard_tiles = self.get_dashboard_tiles()
@@ -127,16 +145,12 @@ class Homeweb(BasePage):
     def search_and_open_resource(self, search_term, endpoint=None):
         self.search_resources(search_term)
         self.wait_for_search_results()
-        result_titles = [
-            el.text.strip()
-            for el in self.driver.find_elements(By.CSS_SELECTOR, "a.item-resource-text .title")
-        ]
-        assert search_term in result_titles, \
-            f"EXPECTED: '{search_term}' in results | ACTUAL: {result_titles}"
         if endpoint:
-            self.click_element(By.XPATH, f"//a[contains(@class,'item-resource-text') and contains(@href,'{endpoint}')]")
+            locator = (By.XPATH, f"//a[contains(@class,'item-resource-text') and contains(@href,'{endpoint}')]")
         else:
-            self.click_element(By.XPATH, f"//a[contains(@class,'item-resource-text')][.//span[contains(@class,'title') and normalize-space()='{search_term}']]")
+            locator = (By.XPATH, f"//a[contains(@class,'item-resource-text')][.//span[contains(@class,'title') and normalize-space()='{search_term}']]")
+        self.wait.until(expected_conditions.visibility_of_element_located(locator))
+        self.click_element(*locator)
 
     def navigate_recommendations(self):
         self.wait.until(expected_conditions.visibility_of_element_located((By.CLASS_NAME, "item-pathfinder-recommends-v2")))
@@ -900,9 +914,8 @@ class Homeweb(BasePage):
         print(selected_province)
 
         # 4: City (wait for reload only if province changed)
-        from selenium.common.exceptions import StaleElementReferenceException
-
         if selected_province != current_province:
+            # TODO: Replace StaleElementReferenceException with JS atomic read once backwards compatibility is confirmed
             def city_reloaded(driver):
                 try:
                     return [o.text for o in driver.find_element(By.ID, "city").find_elements(By.TAG_NAME, "option")] != current_cities

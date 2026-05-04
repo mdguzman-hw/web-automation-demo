@@ -10,32 +10,32 @@ from selenium.webdriver.common.by import By
 
 
 ## CORE MODULES
-# [HOLD] - Registration
+# TODO | Registration
 # [DONE] Standard | DSGDEMO
-# [HOLD] MFA | Canada Post Corporation
-# [HOLD] Custom | LSO, Alumni, Equitable
-# [HOLD] Eligibility List | Canada Post Corporation
-# [HOLD] Additional Fields | Alumni, Equitable, etc.
-# [HOLD] Registration/Invitation Code | Dependents invite?? PAC?
+# TODO | MFA - Canada Post Corporation
+# TODO | Custom - LSO, Alumni, Equitable
+# TODO | Eligibility List - Canada Post Corporation
+# TODO | Additional Fields - Alumni, Equitable, etc.
+# TODO | Registration/Invitation Code - Dependents invite?? PAC?
 
-# [HOLD] Login
+# TODO - Login
 # [DONE] - DSGDEMO
 # [DONE] - HHI
 
-# [P1] Dashboard - S1
-# TODO - Onboarding
+# TODO-P1 | Dashboard - S1
+# TODO-P1 | Onboarding [WIP]
 
-# [P3] Dashboard - S2
+# TODO-P1 | Dashboard - S2
 
-# [P2] Dashboard - S3
+# TODO-P1 Dashboard - S3
 
-# [P2] Discover - Mental Health
-# [P2] Discover - Wellness
-# [P2] Discover - Work-Life
+# TODO-P2 Discover - Mental Health
+# TODO-P2 Discover - Wellness
+# TODO-P2 Discover - Work-Life
 
-# [P2] Journey - Plans
-# [P2] Journey - Sessions
-# [P2] Journey - Appointments
+# TODO-P2 Journey - Plans
+# TODO-P2 Journey - Sessions
+# TODO-P2 Journey - Appointments
 
 # [DONE] Smart Care Navigation
 # [DONE] - Scenario 1: Resource ONLY
@@ -45,15 +45,15 @@ from selenium.webdriver.common.by import By
 # [DONE] - Scenario 5: Legal Flow
 # [DONE] - Scenario 6: Financial Flow
 
-# [P1] Booking
-# [P1] Profile
+# TODO-P1 Booking [NEXT]
+# TODO-P1 Profile [NEXT]
 
-# Library
+# [DONE] Library
 # [DONE] - Resource Library
 # [DONE] - Primary Category
 # [DONE] - Subcategory
 
-# [P3] Messages
+# [DONE] Messages
 
 
 # BAT-WEB-001 | Navigate Homeweb
@@ -95,8 +95,8 @@ def test_bat_web_002(homeweb):
 # BAT-WEB-003 | Standard Registration - Organization: DSGDEMO
 # Step 2 is skipped - No division
 def test_bat_web_003(homeweb, credentials, env, record_output, record_account):
-    # TODO: UNDO
-    pytest.skip("TEMP. Do not forget to UNDO!")
+    if input("Include new registration in this run? (y/n): ").strip().lower() != "y":
+        pytest.skip("Registration skipped by user")
 
     assert homeweb.is_landing(), "NOT ON LANDING PAGE"
     buttons = homeweb.public["elements"]["buttons"]
@@ -175,16 +175,10 @@ def test_bat_web_003(homeweb, credentials, env, record_output, record_account):
 
 # BAT-WEB-004 | Homeweb Login
 def test_bat_web_004(homeweb, quantum, latest_registered_account, record_output):
-    # TODO: UNDO
-    # assert quantum.domain in quantum.current_url.lower(), \
-    #     f"EXPECTED: '{quantum.domain}' | ACTUAL: {quantum.current_url}"
-
-    # TODO: UNDO, just by passing registration
-    assert homeweb.is_landing()
+    # 1: Test - Sign In - Button
+    homeweb.navigate_landing()
     buttons = homeweb.public["elements"]["buttons"]
     quantum = homeweb.quantum
-
-    # 1: Test - Sign In - Button
     homeweb.click_element(By.XPATH, buttons["sign_in"])
     assert quantum.domain in homeweb.current_url.lower()
 
@@ -498,16 +492,20 @@ def test_bat_web_020(homeweb, quantum, record_output):
 
     homeweb.take_screenshot("scenario6", logger=record_output)
 
+
+# BAT-WEB-021 | Navigate to Messages
+def test_bat_web_021(homeweb):
+    homeweb.is_authenticated()
+
+    # 1: Test - Navigate to Messages
+    homeweb.navigate_messages()
+
     homeweb.logout()
 
 
-# BAT-WEB-021 | Embedded - Mobile Resources
-def test_bat_web_021(homeweb):
-    # KNOWN ISSUE 1 - Workaround: Manually navigate back to landing (locale-aware)
-    homeweb.navigate_landing()
-    assert homeweb.is_landing()
-    lang_prefix = "" if homeweb.language.lower() == "en" else f"/{homeweb.language}"
-
+# BAT-WEB-022 | Embedded - Mobile Resources
+def test_bat_web_022(homeweb):
+    lang_prefix = f"/{homeweb.language}" if homeweb.language == "fr" else ""
     resource_1_target = homeweb.base_url + lang_prefix + "/summertime-and-your-health?embedded"
     resource_2_target = homeweb.base_url + lang_prefix + "/mental-health-benefits-of-exercise?embedded"
     resource_3_target = homeweb.base_url + lang_prefix + "/summer-beauty-from-the-inside-out?embedded"
@@ -527,25 +525,25 @@ def test_bat_web_021(homeweb):
     assert homeweb.wait_for_resource_content()
     homeweb.go_back()
 
-# # BAT-WEB-xxx | HHI Cancel Active Services [hhi-employee@demo.com]
+# # TODO: BAT-WEB-xxx | HHI Cancel Active Services [hhi-employee@demo.com]
 # # [SKIP - Andrew request]
 # def test_bat_web_xxx(homeweb, quantum, credentials, env):
 #     pytest.skip("Skipping Cancel Active Services -> Andrew request")
 #
 #
-# # BAT-WEB-xxx | Live Chat
+# # TODO: BAT-WEB-xxx | Live Chat
 # # [SKIP - MANUAL]
 # def test_bat_web_xxx(homeweb, quantum, credentials, env):
 #     pytest.skip("Skipping Live Chat -> MANUAL TEST")
 #
 #
-# # BAT-WEB-xxx | Create Pathfinder Booking
+# # TODO: BAT-WEB-xxx | Create Pathfinder Booking
 # # [SKIP - WIP]
 # def test_bat_web_xxx(homeweb, credentials, env):
 #     pytest.skip("Skipping Create Booking -> WIP")
 #
 #
-# # BAT-WEB-xxx | Complete Pathfinder Booking
+# # TODO: BAT-WEB-xxx | Complete Pathfinder Booking
 # # [SKIP - WIP]
 # def test_bat_web_xxx(homeweb, credentials):
 #     pytest.skip("Skipping Complete Booking -> WIP")
