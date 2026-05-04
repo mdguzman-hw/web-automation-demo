@@ -6,8 +6,8 @@
 
 | | |
 |---|---|
-| **Previous** | 8.1 / 10 |
-| **Current** | 8.4 / 10 |
+| **Previous** | 8.7 / 10 |
+| **Current** | 8.8 / 10 |
 | **Last reviewed** | 2026-05-04 |
 
 ---
@@ -52,6 +52,20 @@
 | 34 | `assert_recommendation_scenario_5/6` implemented — `_assert_recommendation_row()` validates 2-column row (Prof Support tile + resource list) with fallback to resource-only tile | `NotImplementedError` stubs | **Implemented** |
 | 35 | `scripts/test_scn.sh` — one-command runner for SCN suite (BAT-WEB-014–020) against beta | No dedicated runner | **New** |
 | 36 | `test_bat_homeweb-new.py` expanded from 4 to 21 active tests covering Registration, Login, Library, Kickouts, Course Consent, Logout, and all 6 SCN scenarios | 4 active tests | **Implemented** |
+| 37 | Reports directory restructured — each run now gets its own subdirectory `reports/{date}/{timestamp}/`; timestamp moved to filename prefix on CSV/TXT/scenario files; `_reports_dir` computed once at module level in `conftest.py` | All files flat in date folder, timestamp suffix | **Improved** |
+| 38 | `search_and_open_resource` — replaced `StaleElementReferenceException` retry with `wait.until(visibility_of_element_located)` + `click_element(*locator)`; eliminates intermediate list collection entirely | Stale element retry loop | **Fixed** |
+| 39 | `StaleElementReferenceException` promoted to top-level import in `Homeweb.py`; inline local imports removed; city dropdown usage flagged with TODO for JS atomic replacement | Local inline imports | **Cleaned** |
+| 40 | `test_bat_web_003` — interactive prompt at test start: `Include new registration in this run? (y/n)`; skips cleanly if user declines | Hardcoded `pytest.skip` | **Improved** |
+| 41 | CSV and TXT report files removed — `_write_test_matrix_xlsx` is now the single report artifact per run | Three separate output files | **Consolidated** |
+| 42 | Matrix format: columns ID, Description, Logs, PROD/BETA/LOCAL; TOTALS section includes Build (versions), Passed, Failed, Not Run, Completed, Percentage Passed | Separate CSV for metrics | **New** |
+| 43 | `pytest_collection_finish` hook — parses `# BAT-WEB-XXX \| Description` comments above each test function to build `_test_metadata`; drives matrix row population | No automatic test metadata | **New** |
+| 44 | Failure detail appended to Logs cell — last meaningful assertion line from longrepr shown as `[ENV FAILED] ...` so failures are self-contained in the matrix | Lost on TXT removal | **New** |
+| 45 | Logs column defaults to `-` when no `record_output` stdout is captured | Empty cell | **Fixed** |
+| 46 | Run time sourced from `terminalreporter._sessionduration` (pytest's own timer) and displayed in terminal summary | Not tracked | **New** |
+| 47 | Terminal summary path shortened to `/date/timestamp/file`; label changed from "Matrix saved" to "Report saved" | Full absolute path | **Improved** |
+| 48 | `test_bat_homeweb.py` — all 23 `# TEST:` comments updated to `# BAT-WEB-XXX \| description` format; report now generates for the old portal suite | No report generated | **Fixed** |
+| 49 | `select_booking_options` — "Review & confirm" button selector replaced with XPath text match `//button[contains(normalize-space(), 'Review') and not(contains(@class, 'disabled'))]`; resilient to CSS class changes in new portal UI | `btn-primary` hardcoded class broke on PROD new portal | **Fixed** |
+| 50 | Terminal summary cleanup — `total_completed` dead variable removed; version strings inlined into `if _versions:` block; `run_time` computation moved before output block | Minor dead code | **Cleaned** |
 
 ---
 
@@ -72,6 +86,9 @@
 | 11 | **`registered-accounts.xlsx` Onboarded column not yet populated** | Medium | Column exists in headers but no value is written — requires a post-login API call to `{base_url}/app/{language}/ajax/homeweb/client` to read the 5 `showOnboarding*` flags and update the last row. |
 | 12 | **`test_bat_web_003` email verification requires manual input** | Medium | Step 5 uses `input()` to pause for manual code entry. TODO: wire in via IMAP/email API to make fully automated. |
 | 13 | **`test_bat_web_003` password is hardcoded** | Low | `password = "QuantumSentio123$"` is inline in the test rather than sourced from `.env`. |
+| 14 | **`navigate_messages()` used `By.CLASS_NAME` for `managerMessages`** | Low | Should be `By.ID` — caused `test_bat_web_021` to timeout. Fixed by user. |
+| 15 | **`StaleElementReferenceException` still used in city dropdown** | Low | City reload check in `Homeweb.py` still uses try/except on stale element. TODO to replace with JS atomic read once backwards compatibility confirmed. |
+| 16 | **TODO: Investigate PROD booking selectors against new portal UI** | Medium | `btn-primary` button selector fixed; time slot and modality selectors in `select_booking_options` PROD branch may also diverge as new portal rolls out to PROD. |
 
 ---
 

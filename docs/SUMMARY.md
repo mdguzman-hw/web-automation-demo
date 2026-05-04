@@ -195,7 +195,8 @@ A parallel BAT suite for the redesigned Homeweb portal (Beta). 21 active tests c
 | BAT-WEB-018 | SCN — Scenario 4: Sentio ONLY |
 | BAT-WEB-019 | SCN — Scenario 5: Legal Flow |
 | BAT-WEB-020 | SCN — Scenario 6: Financial Flow |
-| BAT-WEB-021 | Embedded mobile resources |
+| BAT-WEB-021 | Messages — navigate and verify inbox |
+| BAT-WEB-022 | Embedded mobile resources |
 
 **Module status:**
 
@@ -216,13 +217,24 @@ A parallel BAT suite for the redesigned Homeweb portal (Beta). 21 active tests c
 
 ## Reporting
 
-After every run, `conftest.py` auto-generates files under `reports/MM-DD-YYYY/`:
+After every run, `conftest.py` auto-generates a single Excel report under `reports/MM-DD-YYYY/<timestamp>/`:
 
-- **`<suite>_<timestamp>.csv`** — Per-environment pass/fail/skip counts + version info
-- **`<suite>_<timestamp>.txt`** — Full test-by-test output including stdout, skip reasons, and failure details
+- **`<timestamp>_<suite>_matrix.xlsx`** — Full test matrix with per-test results, logs, and totals
 - **`fail-<test>-<env>_<timestamp>.png`** — Screenshot saved automatically on any test failure
+- **`<timestamp>_<name>.png`** — Manual screenshots taken mid-test (e.g. SCN scenario results)
 
-All three artifacts share a single `_run_timestamp` generated at session start, making it easy to cross-reference a failure screenshot or account entry with its report.
+Each run gets its own subdirectory named after `_run_timestamp`, keeping all artifacts from the same session grouped together.
+
+### Matrix format
+
+| Column | Content |
+|--------|---------|
+| ID | Test ID (e.g. `BAT-WEB-001`) — parsed from `# BAT-WEB-XXX \| Description` comment above each test |
+| Description | Test description from the same comment |
+| Logs | `record_output` stdout; failure detail appended as `[ENV FAILED] ...`; `-` if empty |
+| PROD / BETA / LOCAL | `Y` (green) / `N` (red) / `-` per environment |
+
+TOTALS section at the bottom: env labels + Build (version info), then Passed, Failed, Not Run, Completed, Percentage Passed per env column.
 
 A formatted summary table is also printed to the terminal:
 
@@ -234,6 +246,12 @@ Failed                                 0       1       0
 Not Run (Skipped, N/A, etc.)           3       3      23
 Completed                             12       9       0
 Percentage Passed                    100%     89%     N/A
+--------------------------------------------------------------
+Total Passed                             20
+...
+Run Time                             4m 39s
+
+  Report saved: /05-04-2026/20260504_140112/20260504_140112_bat_homeweb-new_matrix.xlsx
 ```
 
 ### Account Tracking
@@ -294,4 +312,4 @@ LANGUAGE=fr pytest tests/build_acceptance/test_bat_homeweb.py --env=prod
 
 ---
 
-*Last updated: 2026-05-03*
+*Last updated: 2026-05-04 (reporting consolidated into matrix; test_bat_homeweb.py BAT comments added; booking selector hardened)*
