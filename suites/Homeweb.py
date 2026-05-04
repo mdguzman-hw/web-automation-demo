@@ -58,9 +58,18 @@ class Homeweb(BasePage):
             self.driver.get(f"{self.base_url}/{self.language}")
 
         self.set_landing(True)
+        assert self.domain in self.driver.current_url.lower(), \
+            f"EXPECTED: '{self.domain}' | ACTUAL: {self.driver.current_url}"
+
+    def navigate_sign_in(self):
+        self.click_element(By.CLASS_NAME, self.header.elements["buttons"]["sign_in"])
+        assert self.wait.until(
+            expected_conditions.url_contains(self.header.paths["buttons"]["sign_in"])
+        )
 
     def navigate_dashboard(self):
         self.click_element(By.CSS_SELECTOR, self.header.elements["buttons"]["dashboard"])
+        assert self.wait_for_dashboard()
 
     def navigate_resources(self):
         self.click_element(By.CSS_SELECTOR, self.header.elements["buttons"]["resources"])
@@ -73,7 +82,6 @@ class Homeweb(BasePage):
 
     def navigate_pulsecheck(self):
         self.navigate_dashboard()
-        self.wait_for_dashboard()
         dashboard_tiles = self.get_dashboard_tiles()
         dashboard_tiles[3].navigate()
 
@@ -242,7 +250,7 @@ class Homeweb(BasePage):
         return True
 
     def wait_for_logout(self):
-        # KNOWN ISSUE 1: Logout will always go to EN Landing
+        # Logout will always go to EN Landing
 
         self.set_landing(True)
         self.set_authenticated(False)
@@ -258,7 +266,12 @@ class Homeweb(BasePage):
         assert header.wait_for_account_menu(), "Menu not found"
         header.click_element(By.CSS_SELECTOR, header_buttons["sign_out"])
         assert self.wait_for_logout()
-        self.navigate_landing()
+        # self.navigate_landing()
+
+    def navigate_scn_assessment(self):
+        self.click_element(By.CSS_SELECTOR, "a.item-link.stretched-link[href*='pathfinder/assessment']")
+        assert self.wait_for_assessment(), \
+            f"EXPECTED: 'pathfinder/assessment' | ACTUAL: {self.driver.current_url}"
 
     def wait_for_assessment(self):
         assessment_endpoint = "pathfinder/assessment"
@@ -737,25 +750,52 @@ class Homeweb(BasePage):
         return False
 
     def assert_recommendation_scenario_1(self):
-        """Scenario 1: Professional Support AND Sentio iCBT"""
+        """Scenario 1: Resource ONLY"""
+        assert self._has_resource_recommendation(), "Expected a resource recommendation tile"
+        assert not self._has_recommendation(self._support_text), f"Did not expect '{self._support_text}' tile"
+        assert not self._has_recommendation(self._icbt_text), f"Did not expect '{self._icbt_text}' tile"
+
+    def assert_recommendation_scenario_2(self):
+        """Scenario 2: Professional Support & Sentio iCBT"""
         assert self._has_recommendation(self._support_text), f"Expected '{self._support_text}' tile"
         assert self._has_recommendation(self._icbt_text), f"Expected '{self._icbt_text}' tile"
 
-    def assert_recommendation_scenario_2(self):
-        """Scenario 2: Sentio iCBT only"""
-        assert self._has_recommendation(self._icbt_text), f"Expected '{self._icbt_text}' tile"
-        assert not self._has_recommendation(self._support_text), f"Did not expect '{self._support_text}' tile"
-
     def assert_recommendation_scenario_3(self):
-        """Scenario 3: Professional Support only"""
+        """Scenario 3: Professional Support ONLY"""
         assert self._has_recommendation(self._support_text), f"Expected '{self._support_text}' tile"
         assert not self._has_recommendation(self._icbt_text), f"Did not expect '{self._icbt_text}' tile"
 
     def assert_recommendation_scenario_4(self):
-        """Scenario 4: Resource only"""
-        assert self._has_resource_recommendation(), "Expected a resource recommendation tile"
+        """Scenario 4: Sentio ONLY"""
+        assert self._has_recommendation(self._icbt_text), f"Expected '{self._icbt_text}' tile"
         assert not self._has_recommendation(self._support_text), f"Did not expect '{self._support_text}' tile"
-        assert not self._has_recommendation(self._icbt_text), f"Did not expect '{self._icbt_text}' tile"
+
+    def _assert_recommendation_row(self):
+        # Scenario may render either a 2-column row (Professional Support + resource list)
+        # or fall back to a resource-only tile (same as scenario 1 / scenario 3)
+        has_row = bool(self.driver.find_elements(By.CSS_SELECTOR, ".section-recommendations .item-content .row"))
+
+        if has_row:
+            row = self.driver.find_element(By.CSS_SELECTOR, ".section-recommendations .item-content .row")
+            assert row.is_displayed(), "Recommendation row is not visible"
+
+            left_col = row.find_elements(By.CSS_SELECTOR, ".item-pathfinder-recommends-v2 .item-content")
+            assert left_col and left_col[0].text.strip(), "Left column (recommendation tile) has no content"
+
+            right_items = row.find_elements(By.CSS_SELECTOR, ".item-service-recommendation-list ul li")
+            assert right_items, "Right column (resource list) has no list items"
+        else:
+            assert self._has_resource_recommendation(), "Expected a resource recommendation tile (fallback)"
+
+    def assert_recommendation_scenario_5(self):
+        """Scenario 5: Legal Flow"""
+        # TODO: Confirm expected tile text and resource list content specific to Legal Flow
+        self._assert_recommendation_row()
+
+    def assert_recommendation_scenario_6(self):
+        """Scenario 6: Financial Flow"""
+        # TODO: Confirm expected tile text and resource list content specific to Financial Flow
+        self._assert_recommendation_row()
 
     def wait_for_next_step(self, previous_question):
         pre_url = self.current_url

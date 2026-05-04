@@ -3,13 +3,10 @@
 ################# BUILD ACCEPTANCE ################
 ##################### HOMEWEB #####################
 ################# NEW PORTAL - BETA ###############
-import os
 from datetime import datetime
 
 import pytest
 from selenium.webdriver.common.by import By
-
-from conftest import _run_timestamp
 
 
 # CORE MODULES
@@ -42,8 +39,8 @@ from conftest import _run_timestamp
 
 # [WIP] Smart Care Navigation
 # [DONE] - Scenario 1: Resource ONLY
-# [WIP] - Scenario 2: Professional Support & Sentio
-# [WIP] - Scenario 3: Professional Support ONLY
+# [DONE] - Scenario 2: Professional Support & Sentio
+# [DONE] - Scenario 3: Professional Support ONLY
 # [WIP] - Scenario 4: Sentio ONLY
 # [WIP] - Scenario 5: Legal Flow
 # [WIP] - Scenario 6: Financial Flow
@@ -68,8 +65,6 @@ def test_bat_web_001(homeweb, quantum, env, record_version):
 
     # 2: Test - Navigate to Homeweb landing
     homeweb.navigate_landing()
-    assert homeweb.domain in homeweb.current_url.lower(), \
-        f"EXPECTED: '{homeweb.domain}' | ACTUAL: {homeweb.current_url}"
 
 
 # BAT-WEB-002 | Homeweb Landing Articles
@@ -272,7 +267,7 @@ def test_bat_web_009(homeweb):
 
 # BAT-WEB-010 | Kickouts
 def test_bat_web_010(homeweb, env, record_output):
-    pytest.skip("Skipping -> KNOWN ISSUE: HRA kickout")
+    pytest.skip("Skipping -> HRA kickout | KNOWN ISSUE")
     assert homeweb.wait_for_resources()
 
     is_fr = homeweb.language == "fr"
@@ -356,52 +351,153 @@ def test_bat_web_013(homeweb):
     homeweb.logout()
 
 
-# BAT-WEB-014 | Homeweb Login - HHI Account
+# BAT-WEB-014 | Homeweb Login - HHI
 def test_bat_web_014(homeweb, credentials, env, record_output):
+    homeweb.navigate_landing()
     email = credentials["hhi_personal"]["email"]
     password = credentials["hhi_personal"]["password"]
 
     assert homeweb.is_landing()
-    header = homeweb.header
-    header_buttons = header.elements["buttons"]
-    paths = header.paths["buttons"]
-    quantum = homeweb.quantum
 
     # 1: Test - Sign In - Header
-    header.click_element(By.CLASS_NAME, header_buttons["sign_in"])
-    assert paths["sign_in"] in quantum.current_url.lower()
+    homeweb.navigate_sign_in()
 
-    # 2: Test - Login - Homeweb - HHI Account
+    # 2: Test - Login - Homeweb - HHI
+    quantum = homeweb.quantum
     quantum.login(email, password)
     record_output(f"Login | Email: {email}")
     assert homeweb.wait_for_dashboard(), \
         f"DASHBOARD NOT LOADED: '{homeweb.current_url}'"
 
 
-# BAT-WEB-015 | SCN - Scenario 1: Resource ONLY [HHI Account]
+# BAT-WEB-015 | SCN - Scenario 1: Resource ONLY [HHI]
 def test_bat_web_015(homeweb, record_output):
     assert homeweb.is_authenticated()
     assert homeweb.wait_for_dashboard(), \
         f"DASHBOARD NOT LOADED: '{homeweb.current_url}'"
 
     # 1: Test - Launch Smart Care Navigation Assessment
-    scn_assessment_endpoint = "pathfinder/assessment"
-    homeweb.click_element(By.CSS_SELECTOR, "a.item-link.stretched-link[href*='pathfinder/assessment']")
-    assert scn_assessment_endpoint in homeweb.current_url, \
-        f"EXPECTED: '{scn_assessment_endpoint}' | ACTUAL: {homeweb.current_url}"
-    assert homeweb.wait_for_assessment()
+    homeweb.navigate_scn_assessment()
     record_output("Smart Care Navigation launched")
 
-    # 2: Test - Complete Smart Care Navigation Assessment
+    # 2: Test - Complete SCN Assessment - Scenario 1
+    homeweb.complete_assessment(logger=record_output)
+    assert homeweb.is_assessment_complete()
+    homeweb.assert_recommendation_scenario_1()
+
+    homeweb.take_screenshot("scenario1", logger=record_output)
+
+    homeweb.logout()
+
+
+# BAT-WEB-016 | SCN - Scenario 2: Professional Support & Sentio [DSGDEMO]
+def test_bat_web_016(homeweb, quantum, credentials, record_output):
+
+    # 1: Test - Sign In - Header
+    assert homeweb.is_landing()
+    homeweb.navigate_sign_in()
+
+    # 2: Test - Login - Homeweb - DSGDEMO
+    quantum = homeweb.quantum
+    email = credentials["dsgdemo_s2"]["email"]
+    password = credentials["dsgdemo_s2"]["password"]
+    quantum.login(email, password)
+    record_output(f"Login | Email: {email}")
+    assert homeweb.wait_for_dashboard(), \
+        f"DASHBOARD NOT LOADED: '{homeweb.current_url}'"
+
+    # 3: Test - Launch Smart Care Navigation Assessment
+    homeweb.navigate_scn_assessment()
+    record_output("Smart Care Navigation launched")
+
+    # 4: Test - Complete SCN Assessment - Scenario 2
+    homeweb.complete_assessment(logger=record_output)
+    assert homeweb.is_assessment_complete()
+    homeweb.assert_recommendation_scenario_2()
+
+    homeweb.take_screenshot("scenario2", logger=record_output)
+
+
+# BAT-WEB-017 | SCN - Scenario 3: Professional Support ONLY [DSGDEMO]
+def test_bat_web_017(homeweb, quantum, record_output):
+    homeweb.navigate_dashboard()
+
+    # 3: Test - Launch Smart Care Navigation Assessment
+    homeweb.navigate_scn_assessment()
+    record_output("Smart Care Navigation launched")
+
+    # 4: Test - Complete SCN Assessment - Scenario 3
+    flow = [2, 1, 1]
+    homeweb.complete_assessment(flow, logger=record_output)
+    assert homeweb.is_assessment_complete()
+    homeweb.assert_recommendation_scenario_3()
+
+    homeweb.take_screenshot("scenario3", logger=record_output)
+
+    homeweb.logout()
+
+
+# BAT-WEB-018 | SCN - Scenario 4: Sentio ONLY [DSGDEMO-S3]
+def test_bat_web_018(homeweb, quantum, credentials, record_output):
+    # 1: Test - Sign In - Header
+    assert homeweb.is_landing()
+    homeweb.navigate_sign_in()
+
+    # 2: Test - Login - Homeweb - DSGDEMO
+    quantum = homeweb.quantum
+    email = credentials["dsgdemo_s3"]["email"]
+    password = credentials["dsgdemo_s3"]["password"]
+    quantum.login(email, password)
+    record_output(f"Login | Email: {email}")
+    assert homeweb.wait_for_dashboard(), \
+        f"DASHBOARD NOT LOADED: '{homeweb.current_url}'"
+
+    # 3: Test - Launch Smart Care Navigation Assessment
+    homeweb.navigate_scn_assessment()
+    record_output("Smart Care Navigation launched")
+
+    # 4: Test - Complete SCN Assessment - Scenario 4
     homeweb.complete_assessment(logger=record_output)
     assert homeweb.is_assessment_complete()
     homeweb.assert_recommendation_scenario_4()
 
-    date_str = _run_timestamp[4:6] + "-" + _run_timestamp[6:8] + "-" + _run_timestamp[:4]
-    reports_dir = f"reports/{date_str}"
-    os.makedirs(reports_dir, exist_ok=True)
-    homeweb.driver.save_screenshot(f"{reports_dir}/scenario1-{_run_timestamp}.png")
-    record_output(f"Screenshot saved: scenario1-{_run_timestamp}.png")
+    homeweb.take_screenshot("scenario4", logger=record_output)
+
+
+# BAT-WEB-019 | SCN - Scenario 5: Legal Flow [DSGDEMO]
+def test_bat_web_019(homeweb, quantum, record_output):
+    homeweb.navigate_dashboard()
+
+    # 3: Test - Launch Smart Care Navigation Assessment
+    homeweb.navigate_scn_assessment()
+    record_output("Smart Care Navigation launched")
+
+    # 4: Test - Complete SCN Assessment - Scenario 5
+    flow = [3, 4]
+    homeweb.complete_assessment(flow, logger=record_output)
+    assert homeweb.is_assessment_complete()
+    homeweb.assert_recommendation_scenario_5()
+
+    homeweb.take_screenshot("scenario5", logger=record_output)
+
+    # homeweb.logout()
+
+
+# BAT-WEB-020 | SCN - Scenario 6: Financial Flow [DSGDEMO]
+def test_bat_web_020(homeweb, quantum, record_output):
+    homeweb.navigate_dashboard()
+
+    # 3: Test - Launch Smart Care Navigation Assessment
+    homeweb.navigate_scn_assessment()
+    record_output("Smart Care Navigation launched")
+
+    # 4: Test - Complete SCN Assessment - Scenario 6
+    flow = [4, 3]
+    homeweb.complete_assessment(flow, logger=record_output)
+    assert homeweb.is_assessment_complete()
+    homeweb.assert_recommendation_scenario_6()
+
+    homeweb.take_screenshot("scenario6", logger=record_output)
 
 # # BAT-WEB-011 | Cancel Active Services
 # # [SKIP - WIP]
@@ -460,7 +556,7 @@ def test_bat_web_015(homeweb, record_output):
 #     flow = [0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
 #     homeweb.complete_assessment(flow, logger=record_output)
 #     assert homeweb.is_assessment_complete()
-#     homeweb.assert_recommendation_scenario_1()
+#     homeweb.assert_recommendation_scenario_2()
 #
 #
 # # BAT-WEB-014 | Complete Pathfinder Assessment - Scenario 2
