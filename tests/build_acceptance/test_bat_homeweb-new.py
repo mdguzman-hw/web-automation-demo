@@ -191,8 +191,17 @@ def test_bat_web_004(homeweb, quantum, latest_registered_account, record_output)
         f"DASHBOARD NOT LOADED: '{homeweb.current_url}'"
 
 
-# BAT-WEB-005 | Homeweb Resource
-def test_bat_web_005(homeweb):
+# BAT-WEB-005 | Complete Onboarding
+def test_bat_web_005(homeweb, record_output, registered_this_run):
+    if not registered_this_run:
+        pytest.skip("Skipping — no account registered this run (test_bat_web_003 did not execute)")
+    assert homeweb.is_authenticated()
+    homeweb.complete_onboarding(logger=record_output)
+    assert homeweb.wait_for_dashboard()
+
+
+# BAT-WEB-006 | Homeweb Resource
+def test_bat_web_006(homeweb):
     assert homeweb.is_authenticated()
 
     # 1: Test - Navigate to resource
@@ -202,8 +211,8 @@ def test_bat_web_005(homeweb):
         f"RESOURCE NOT LOADED"
 
 
-# BAT-WEB-006 | Resource Library
-def test_bat_web_006(homeweb, record_output):
+# BAT-WEB-007 | Resource Library
+def test_bat_web_007(homeweb, record_output):
     assert homeweb.is_authenticated()
 
     # 1: Test - Navigate to Resources
@@ -217,8 +226,8 @@ def test_bat_web_006(homeweb, record_output):
     record_output(f"Resource categories ({len(category_names)}): {', '.join(category_names)}")
 
 
-# BAT-WEB-007 | Primary Category
-def test_bat_web_007(homeweb, record_output):
+# BAT-WEB-008 | Primary Category
+def test_bat_web_008(homeweb, record_output):
     assert homeweb.wait_for_resources()
 
     # 1: Test - Click first primary category
@@ -232,8 +241,8 @@ def test_bat_web_007(homeweb, record_output):
     assert homeweb.wait_for_resources()
 
 
-# BAT-WEB-008 | Subcategory
-def test_bat_web_008(homeweb, record_output):
+# BAT-WEB-009 | Subcategory
+def test_bat_web_009(homeweb, record_output):
     assert homeweb.wait_for_resources()
 
     # 1: Test - Get subcategories from active primary category
@@ -250,8 +259,8 @@ def test_bat_web_008(homeweb, record_output):
     assert homeweb.wait_for_resources()
 
 
-# BAT-WEB-009 | Search
-def test_bat_web_009(homeweb):
+# BAT-WEB-010 | Search
+def test_bat_web_010(homeweb):
     assert homeweb.wait_for_resources()
 
     # 1: Test - Perform search
@@ -259,8 +268,8 @@ def test_bat_web_009(homeweb):
     assert homeweb.wait_for_search_results()
 
 
-# BAT-WEB-010 | Kickouts
-def test_bat_web_010(homeweb, env, record_output):
+# BAT-WEB-011 | Kickouts
+def test_bat_web_011(homeweb, env, record_output):
     pytest.skip("Skipping -> HRA kickout | KNOWN ISSUE")
     assert homeweb.wait_for_resources()
 
@@ -292,8 +301,8 @@ def test_bat_web_010(homeweb, env, record_output):
         assert homeweb.wait_for_resources()
 
 
-# BAT-WEB-011 | Sentio Kickout
-def test_bat_web_011(homeweb, record_output):
+# BAT-WEB-012 | Sentio Kickout
+def test_bat_web_012(homeweb, record_output):
     sentio_endpoint = "/resources/62c5a1e929ed9c1608d0434b"
     search_term = "Sentio par Homewood Santé" if homeweb.language == "fr" else "Sentio by Homewood Health"
 
@@ -314,8 +323,8 @@ def test_bat_web_011(homeweb, record_output):
     homeweb.go_back()
 
 
-# BAT-WEB-012 | Course Consent
-def test_bat_web_012(homeweb, record_output):
+# BAT-WEB-013 | Course Consent
+def test_bat_web_013(homeweb, record_output):
     homeweb.navigate_library()
     assert homeweb.wait_for_resources()
     course_endpoint = "/resources/564a36083392100756dd3e32"
@@ -339,14 +348,15 @@ def test_bat_web_012(homeweb, record_output):
     assert homeweb.wait_for_course_content()
 
 
-# BAT-WEB-013 | Homeweb Logout
-def test_bat_web_013(homeweb):
+
+# BAT-WEB-014 | Homeweb Logout
+def test_bat_web_014(homeweb):
     assert homeweb.is_authenticated()
     homeweb.logout()
 
 
-# BAT-WEB-014 | Homeweb Login - HHI
-def test_bat_web_014(homeweb, credentials, env, record_output):
+# BAT-WEB-015 | Homeweb Login - HHI
+def test_bat_web_015(homeweb, credentials, env, record_output):
     homeweb.navigate_landing()
     email = credentials["hhi_personal"]["email"]
     password = credentials["hhi_personal"]["password"]
@@ -364,8 +374,8 @@ def test_bat_web_014(homeweb, credentials, env, record_output):
         f"DASHBOARD NOT LOADED: '{homeweb.current_url}'"
 
 
-# BAT-WEB-015 | SCN - Scenario 1: Resource ONLY [HHI]
-def test_bat_web_015(homeweb, record_output):
+# BAT-WEB-016 | SCN - Scenario 1: Resource ONLY [HHI]
+def test_bat_web_016(homeweb, record_output):
     assert homeweb.is_authenticated()
     assert homeweb.wait_for_dashboard(), \
         f"DASHBOARD NOT LOADED: '{homeweb.current_url}'"
@@ -384,8 +394,8 @@ def test_bat_web_015(homeweb, record_output):
     homeweb.logout()
 
 
-# BAT-WEB-016 | SCN - Scenario 2: Professional Support & Sentio [DSGDEMO]
-def test_bat_web_016(homeweb, quantum, credentials, record_output):
+# BAT-WEB-017 | SCN - Scenario 2: Professional Support & Sentio [DSGDEMO]
+def test_bat_web_017(homeweb, quantum, credentials, record_output):
     # 1: Test - Sign In - Header
     assert homeweb.is_landing()
     homeweb.navigate_sign_in()
@@ -411,8 +421,8 @@ def test_bat_web_016(homeweb, quantum, credentials, record_output):
     homeweb.take_screenshot("scenario2", logger=record_output)
 
 
-# BAT-WEB-017 | SCN - Scenario 3: Professional Support ONLY [DSGDEMO]
-def test_bat_web_017(homeweb, quantum, record_output):
+# BAT-WEB-018 | SCN - Scenario 3: Professional Support ONLY [DSGDEMO]
+def test_bat_web_018(homeweb, quantum, record_output):
     homeweb.navigate_dashboard()
 
     # 3: Test - Launch Smart Care Navigation Assessment
@@ -430,8 +440,8 @@ def test_bat_web_017(homeweb, quantum, record_output):
     homeweb.logout()
 
 
-# BAT-WEB-018 | SCN - Scenario 4: Sentio ONLY [DSGDEMO-S3]
-def test_bat_web_018(homeweb, quantum, credentials, record_output):
+# BAT-WEB-019 | SCN - Scenario 4: Sentio ONLY [DSGDEMO-S3]
+def test_bat_web_019(homeweb, quantum, credentials, record_output):
     # 1: Test - Sign In - Header
     assert homeweb.is_landing()
     homeweb.navigate_sign_in()
@@ -457,8 +467,8 @@ def test_bat_web_018(homeweb, quantum, credentials, record_output):
     homeweb.take_screenshot("scenario4", logger=record_output)
 
 
-# BAT-WEB-019 | SCN - Scenario 5: Legal Flow [DSGDEMO]
-def test_bat_web_019(homeweb, quantum, record_output):
+# BAT-WEB-020 | SCN - Scenario 5: Legal Flow [DSGDEMO]
+def test_bat_web_020(homeweb, quantum, record_output):
     homeweb.navigate_dashboard()
 
     # 3: Test - Launch Smart Care Navigation Assessment
@@ -476,8 +486,8 @@ def test_bat_web_019(homeweb, quantum, record_output):
     # homeweb.logout()
 
 
-# BAT-WEB-020 | SCN - Scenario 6: Financial Flow [DSGDEMO]
-def test_bat_web_020(homeweb, quantum, record_output):
+# BAT-WEB-021 | SCN - Scenario 6: Financial Flow [DSGDEMO]
+def test_bat_web_021(homeweb, quantum, record_output):
     homeweb.navigate_dashboard()
 
     # 3: Test - Launch Smart Care Navigation Assessment
@@ -493,8 +503,8 @@ def test_bat_web_020(homeweb, quantum, record_output):
     homeweb.take_screenshot("scenario6", logger=record_output)
 
 
-# BAT-WEB-021 | Navigate to Messages
-def test_bat_web_021(homeweb):
+# BAT-WEB-022 | Navigate to Messages
+def test_bat_web_022(homeweb):
     homeweb.is_authenticated()
 
     # 1: Test - Navigate to Messages
@@ -503,8 +513,8 @@ def test_bat_web_021(homeweb):
     homeweb.logout()
 
 
-# BAT-WEB-022 | Embedded - Mobile Resources
-def test_bat_web_022(homeweb):
+# BAT-WEB-023 | Embedded - Mobile Resources
+def test_bat_web_023(homeweb):
     lang_prefix = f"/{homeweb.language}" if homeweb.language == "fr" else ""
     resource_1_target = homeweb.base_url + lang_prefix + "/summertime-and-your-health?embedded"
     resource_2_target = homeweb.base_url + lang_prefix + "/mental-health-benefits-of-exercise?embedded"
