@@ -1058,7 +1058,7 @@ class Homeweb(BasePage):
                 modality_select.select_by_visible_text(selected_modality.text.strip())
 
             # 4: Click Review & confirm
-            self.click_element(By.CSS_SELECTOR, "button.btn-primary:not(.disabled)")
+            self.click_element(By.XPATH, "//button[contains(normalize-space(), 'Review') and not(contains(@class, 'disabled'))]")
 
         else:
             # 2: Select a random available time
@@ -1081,7 +1081,7 @@ class Homeweb(BasePage):
                 modality_select.select_by_visible_text(selected_modality.text.strip())
 
             # 4: Click Review & confirm
-            self.click_element(By.CSS_SELECTOR, "button.btn-primary:not(.disabled)")
+            self.click_element(By.XPATH, "//button[contains(normalize-space(), 'Review') and not(contains(@class, 'disabled'))]")
 
     def confirm_booking(self):
         if self.env == "beta":
