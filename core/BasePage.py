@@ -2,6 +2,7 @@
 
 import os
 import time
+from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.wait import WebDriverWait
 
@@ -23,8 +24,16 @@ class BasePage:
             "arguments[0].scrollIntoView({block: 'center'});", element
         )
 
-        # 3: Wait for layout to stabilize
-        self.wait.until(lambda d: element.is_displayed() and element.is_enabled())
+        # 3: Wait for layout to stabilize; re-fetch on stale reference
+        def is_stable(d):
+            nonlocal element
+            try:
+                return element.is_displayed() and element.is_enabled()
+            except StaleElementReferenceException:
+                element = d.find_element(by, locator)
+                return False
+
+        self.wait.until(is_stable)
 
         # 4: Small pause to allow any final reflows
         time.sleep(0.5)

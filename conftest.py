@@ -256,11 +256,22 @@ def _write_test_matrix_xlsx(report_name, active_envs, run_time="-"):
         for env in active_envs:
             if test_phases.get(func_name, {}).get(env) == "FAILED":
                 detail = test_detail.get(func_name, {}).get(env, "")
-                last_line = next(
-                    (l.strip() for l in reversed(detail.splitlines()) if l.strip()), ""
-                ) if detail else ""
-                if last_line:
-                    logs = (logs + "\n" if logs else "") + f"[{env} FAILED] {last_line[:120]}"
+                if detail:
+                    dlines = detail.splitlines()
+                    # Last traceback line from project code (not .venv or stdlib)
+                    code_ref = next(
+                        (l.strip() for l in reversed(dlines)
+                         if l.strip() and ": in " in l and ".venv/" not in l and not l.startswith("E ")),
+                        ""
+                    )
+                    # First exception line (strips leading "E   ")
+                    exc_msg = next(
+                        (l.strip()[1:].strip() for l in dlines if l.strip().startswith("E ")),
+                        ""
+                    )
+                    summary = " | ".join(filter(None, [code_ref, exc_msg]))
+                    if summary:
+                        logs = (logs + "\n" if logs else "") + f"[{env} FAILED] {summary[:200]}"
         c = data_cell(row, LOGS_COL, logs or "-")
         if logs:
             ws.row_dimensions[row].height = max(15, logs.count("\n") * 15 + 15)
@@ -550,7 +561,7 @@ def record_account():
     import openpyxl
 
     HEADERS = ["Date", "Timestamp", "Env", "Org", "Division", "Role",
-               "First Name", "Last Name", "Preferred Name", "Email", "DOB", "Password", "Marketing Opt-in"]
+               "First Name", "Last Name", "Preferred Name", "Email", "DOB", "Password", "Marketing Opt-in", "Dashboard"]
     ACCOUNTS_PATH = "reports/registered-accounts.xlsx"
 
     def _record(env, org, division, role, first_name, last_name, preferred_name, email, dob, password, marketing_opt_in):
@@ -578,6 +589,7 @@ def record_account():
             dob,
             password,
             "Yes" if marketing_opt_in else "No",
+            "",  # Dashboard — updated by update_account_dashboard after full end-to-end
         ])
         wb.save(ACCOUNTS_PATH)
         _accounts_registered_this_run.append(email)
@@ -598,7 +610,7 @@ def latest_registered_account():
 
     ACCOUNTS_PATH = "reports/registered-accounts.xlsx"
     HEADERS = ["Date", "Timestamp", "Env", "Org", "Division", "Role",
-               "First Name", "Last Name", "Preferred Name", "Email", "DOB", "Password", "Marketing Opt-in"]
+               "First Name", "Last Name", "Preferred Name", "Email", "DOB", "Password", "Marketing Opt-in", "Dashboard"]
 
     if not os.path.exists(ACCOUNTS_PATH):
         pytest.skip("No registered accounts found — run test_bat_web_003 first")
@@ -611,3 +623,25 @@ def latest_registered_account():
 
     values = [ws.cell(row=ws.max_row, column=i + 1).value for i in range(len(HEADERS))]
     return dict(zip(HEADERS, values))
+
+
+@pytest.fixture(scope="session")
+def update_account_dashboard():
+    import openpyxl
+
+    ACCOUNTS_PATH = "reports/registered-accounts.xlsx"
+    TIMESTAMP_COL = 2   # "Timestamp" column (1-based)
+    DASHBOARD_COL = 14  # "Dashboard" column (1-based)
+
+    def _update(state):
+        if not os.path.exists(ACCOUNTS_PATH):
+            return
+        wb = openpyxl.load_workbook(ACCOUNTS_PATH)
+        ws = wb.active
+        for row in ws.iter_rows(min_row=2):
+            if row[TIMESTAMP_COL - 1].value == _run_timestamp:
+                row[DASHBOARD_COL - 1].value = state
+                break
+        wb.save(ACCOUNTS_PATH)
+
+    return _update
