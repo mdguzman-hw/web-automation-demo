@@ -6,9 +6,9 @@
 
 | | |
 |---|---|
-| **Previous** | 8.7 / 10 |
-| **Current** | 8.8 / 10 |
-| **Last reviewed** | 2026-05-04 |
+| **Previous** | 9.0 / 10 |
+| **Current** | 9.1 / 10 |
+| **Last reviewed** | 2026-05-05 |
 
 ---
 
@@ -66,6 +66,24 @@
 | 48 | `test_bat_homeweb.py` — all 23 `# TEST:` comments updated to `# BAT-WEB-XXX \| description` format; report now generates for the old portal suite | No report generated | **Fixed** |
 | 49 | `select_booking_options` — "Review & confirm" button selector replaced with XPath text match `//button[contains(normalize-space(), 'Review') and not(contains(@class, 'disabled'))]`; resilient to CSS class changes in new portal UI | `btn-primary` hardcoded class broke on PROD new portal | **Fixed** |
 | 50 | Terminal summary cleanup — `total_completed` dead variable removed; version strings inlined into `if _versions:` block; `run_time` computation moved before output block | Minor dead code | **Cleaned** |
+| 51 | `Homeweb.complete_onboarding()` — 5-step onboarding flow; Demographics selects fire `change` events via JS; PulseCheck uses `click()`+`HOME`+arrow keys (same pattern as `complete_pulsecheck`); Assessment loops 6 questions with `assessment_flow`/`assessment_answer_index` params matching `complete_assessment` API; `loadingOnboarding` cleared before every Next click and every assessment question | Missing | **New** |
+| 52 | `test_bat_web_005` — Complete Onboarding; inserted after Login (004); old 005–022 renumbered to 006–023; 012x stub removed; suite now 23 active tests; skips automatically if no account registered this run | 012x stub only | **Implemented** |
+| 53 | `_accounts_registered_this_run` session list + `registered_this_run` fixture — tracks whether `test_bat_web_003` completed in the current run; `test_bat_web_005` skips if list is empty; TODO on fixture to fall back to S1 accounts in spreadsheet | No skip guard | **New** |
+| 54 | All `Next`/`Suivant` button XPaths in `complete_onboarding` use `normalize-space()='Next' or normalize-space()='Suivant'` for EN/FR support | EN-only | **Fixed** |
+| 55 | Step 2/3 anchor waits use bilingual button text: `'Add Address'`/`'Ajouter une adresse'` and `'Add Dependent'`/`'Ajouter une personne à charge'` | EN-only | **Fixed** |
+| 56 | `complete_booking_contact_form` — new portal booking contact form: opens Add Address modal, fills Address Type (`select_by_value` for locale safety), Street, Postal Code, Province (random with city reload wait + `StaleElementReferenceException` guard), City (random), closes via Select button, fills Phone, Email, Message Permission, optional Comments, submits | Missing | **New** |
+| 57 | `get_dashboard_state` — detects S1 (`section-account-setup`), S2 (`section-my-services` only), S3 (`section-sessions` + `section-my-services`); used in test 006 to assert S2 before booking and S3 after | Missing | **New** |
+| 58 | `wait_for_provider_matching` — new portal provider selection page: URL (`matching`/`cache`), `loadingPriorityMatches` invisible, `section-priority-results` visible; replaces incorrect `wait_for_booking_digest` call in new portal flow | Missing | **New** |
+| 59 | `select_first_available_provider` — priority path clicks first `btn-time` in `section-priority-results`; fallback path waits for `loadingPage` on `col-provider-list`, iterates providers by index, retries on `noSchedule=true` by clicking "Pick a different person"/"Choisissez une autre personne" | Missing | **New** |
+| 60 | `update_account_dashboard` session fixture — finds current run's row in `registered-accounts.xlsx` by `_run_timestamp`, writes Dashboard state (e.g. `"S3"`); only fires after `assert dashboard_state == "S3"` in test 006; previous rows untouched | Missing | **New** |
+| 61 | `registered-accounts.xlsx` — "Dashboard" column added (index 14); written empty on registration, updated to `"S3"` by `update_account_dashboard` after full E2E; supersedes "Onboarded" column (open issue 11) | No Dashboard column | **New** |
+| 62 | `logout()` — `window.scrollTo(0, 0)` added before menu click; fixes `ElementClickInterceptedException` when page is scrolled to bottom (e.g. after SCN recommendation page) | Would fail on scrolled pages | **Fixed** |
+| 63 | `complete_onboarding` step 4 — `loadingOnboarding` wait added before `slider.click()`; overlay was intercepting click during transition from step 3 | ElementClickInterceptedException on slider | **Fixed** |
+| 64 | `complete_booking_contact_form` address modal — `loadingOnboarding` wait + `#jurisdiction option[value]` count wait before reading province options; fixes `IndexError: Cannot choose from an empty sequence` when modal loads slowly | Province options empty on slow load | **Fixed** |
+| 65 | Address modal two-step save — after "Add Address" saves, clicks "Select" in the resulting "Change Address" confirmation modal before waiting for modal close | Timed out waiting for modal close | **Fixed** |
+| 66 | `wait_for_booking_digest` removed from new portal test 006 — new portal goes directly to matching/cache after contact form submit; old digest page does not appear | Wrong function in flow | **Fixed** |
+| 67 | `test_bat_homeweb-new.py` expanded from 6 to 26 active tests — all commented stubs (007–024) uncommented and reviewed; 023/024 Cancel Appointment and End Service added as `pytest.skip` stubs; 025/026 Messages and Embedded renumbered; `xxx_*` suffix convention adopted for undecided trailing stubs | 6 active tests | **Implemented** |
+| 68 | `update_account_dashboard` writes to correct row by matching `_run_timestamp` — only touches Dashboard column; safe against concurrent rows from previous runs | N/A | **New** |
 
 ---
 
@@ -80,13 +98,13 @@
 | 5 | **`time.sleep()` workarounds** | Medium | Still present in: `navigate_overview`, `start_program`, `continue_goal`, `select_previous_entry`, `complete_steps`, `next_activity` (SentioClient); `end_services`, `select_provider` (Homeweb); `DashboardTile.navigate`. None replaced with `wait.until` conditions. |
 | 6 | **`BasePage.click_element` double DOM lookup** | Medium | Root issue unresolved — two separate `wait.until` calls for the same element create a stale-element window between lookup and click. |
 | 7 | **`phone` variable reused for comments field** | Low | `complete_booking_create_form`: `phone = self.wait.until(...(By.ID, "comments"))`. Misleading variable name. |
-| 8 | **Dead and commented-out code volume growing** | Low | `test_bat_homeweb-new.py` now has 19 commented-out test bodies (~490 lines). This is intentional WIP staging, but combined with `Homeweb.py` dead code (`select_provider_time`, `choose_confirmation_method`, old `wait_for_resources`, debug prints, stale TODOs) the signal-to-noise ratio is declining. |
+| 8 | **Dead and commented-out code volume in `Homeweb.py`** | Low | `select_provider_time`, `choose_confirmation_method`, old `wait_for_resources` (line 77), debug prints, and stale TODO comments remain. `test_bat_homeweb-new.py` stubs are now reduced to 023/024 skips + `xxx_*` tail stubs. |
 | 9 | **`pre_url` dead variable in `wait_for_next_step`** | Low | `pre_url = self.current_url` is assigned on entry but never read. Unresolved across two review cycles. |
 | 10 | **`SentioClient.__init__` env branch is inert** | Low | Both `if env == "prod"` and `else` branches assign the same `SENTIO_BETA_CLIENT_*` constants. The conditional has never done anything. |
-| 11 | **`registered-accounts.xlsx` Onboarded column not yet populated** | Medium | Column exists in headers but no value is written — requires a post-login API call to `{base_url}/app/{language}/ajax/homeweb/client` to read the 5 `showOnboarding*` flags and update the last row. |
+| 11 | **`registered-accounts.xlsx` Dashboard column only writes S3** | Low | Column writes `"S3"` after full E2E booking. S2 (post-onboarding, pre-booking) is never written — empty rows can be assumed S1, but S2 accounts that didn't complete booking are indistinguishable from S1. |
 | 12 | **`test_bat_web_003` email verification requires manual input** | Medium | Step 5 uses `input()` to pause for manual code entry. TODO: wire in via IMAP/email API to make fully automated. |
 | 13 | **`test_bat_web_003` password is hardcoded** | Low | `password = "QuantumSentio123$"` is inline in the test rather than sourced from `.env`. |
-| 14 | **`navigate_messages()` used `By.CLASS_NAME` for `managerMessages`** | Low | Should be `By.ID` — caused `test_bat_web_021` to timeout. Fixed by user. |
+| 14 | **`col-provider-list` provider selector unconfirmed** | Low | `select_first_available_provider` fallback uses `.col-provider-list .item-booking-option` — selector assumed from priority results pattern. Needs verification against actual DOM when no priority matches are present. |
 | 15 | **`StaleElementReferenceException` still used in city dropdown** | Low | City reload check in `Homeweb.py` still uses try/except on stale element. TODO to replace with JS atomic read once backwards compatibility confirmed. |
 | 16 | **TODO: Investigate PROD booking selectors against new portal UI** | Medium | `btn-primary` button selector fixed; time slot and modality selectors in `select_booking_options` PROD branch may also diverge as new portal rolls out to PROD. |
 

@@ -171,7 +171,7 @@ Lightweight checks that confirm critical paths are functional.
 
 ### New Portal BAT (`test_bat_homeweb-new.py`)
 
-A parallel BAT suite for the redesigned Homeweb portal (Beta). 21 active tests covering the flows listed below.
+A parallel BAT suite for the redesigned Homeweb portal (Beta). 26 active tests covering the flows listed below (023/024 are `pytest.skip` stubs pending implementation).
 
 | Test ID | Description |
 |---------|-------------|
@@ -179,24 +179,28 @@ A parallel BAT suite for the redesigned Homeweb portal (Beta). 21 active tests c
 | BAT-WEB-002 | Verify landing page articles (dynamic + static) |
 | BAT-WEB-003 | Standard Registration — DSGDEMO (6 steps, timestamped account, writes to `registered-accounts.xlsx`) |
 | BAT-WEB-004 | Login with latest account from `registered-accounts.xlsx` |
-| BAT-WEB-005 | Navigate to a specific resource |
-| BAT-WEB-006 | Resource Library — initial state, log categories |
-| BAT-WEB-007 | Resource Library — primary category navigation |
-| BAT-WEB-008 | Resource Library — subcategory navigation |
-| BAT-WEB-009 | Resource search |
-| BAT-WEB-010 | Kickouts: Childcare, Eldercare, HRA |
-| BAT-WEB-011 | Sentio kickout via resource search |
-| BAT-WEB-012 | Course consent modal |
-| BAT-WEB-013 | Logout |
-| BAT-WEB-014 | Login — HHI account |
-| BAT-WEB-015 | SCN — Scenario 1: Resource ONLY |
-| BAT-WEB-016 | SCN — Scenario 2: Professional Support & Sentio |
-| BAT-WEB-017 | SCN — Scenario 3: Professional Support ONLY |
-| BAT-WEB-018 | SCN — Scenario 4: Sentio ONLY |
-| BAT-WEB-019 | SCN — Scenario 5: Legal Flow |
-| BAT-WEB-020 | SCN — Scenario 6: Financial Flow |
-| BAT-WEB-021 | Messages — navigate and verify inbox |
-| BAT-WEB-022 | Embedded mobile resources |
+| BAT-WEB-005 | Complete Onboarding — 5-step flow (Demographics, Address skip, Dependents skip, PulseCheck, Assessment 6q); skipped if test_bat_web_003 did not run; confirms S2 dashboard |
+| BAT-WEB-006 | Create and Complete Booking — SCN Scenario 2 → contact form (address modal, random province/city) → provider matching (priority or col-provider-list fallback with noSchedule retry) → select time → confirm; asserts S3 dashboard; writes "S3" to `registered-accounts.xlsx` |
+| BAT-WEB-007 | Navigate to a specific resource |
+| BAT-WEB-008 | Resource Library — initial state, log categories |
+| BAT-WEB-009 | Resource Library — primary category navigation |
+| BAT-WEB-010 | Resource Library — subcategory navigation |
+| BAT-WEB-011 | Resource search |
+| BAT-WEB-012 | Kickouts: Childcare, Eldercare, HRA (skipped — known issue) |
+| BAT-WEB-013 | Sentio kickout via resource search |
+| BAT-WEB-014 | Course consent modal |
+| BAT-WEB-015 | Logout |
+| BAT-WEB-016 | Login — HHI account |
+| BAT-WEB-017 | SCN — Scenario 1: Resource ONLY [HHI] |
+| BAT-WEB-018 | SCN — Scenario 2: Professional Support & Sentio [DSGDEMO-S2] |
+| BAT-WEB-019 | SCN — Scenario 3: Professional Support ONLY [DSGDEMO-S2] |
+| BAT-WEB-020 | SCN — Scenario 4: Sentio ONLY [DSGDEMO-S3] |
+| BAT-WEB-021 | SCN — Scenario 5: Legal Flow [DSGDEMO-S3] |
+| BAT-WEB-022 | SCN — Scenario 6: Financial Flow [DSGDEMO-S3] |
+| BAT-WEB-023 | Cancel Appointment [STUB] |
+| BAT-WEB-024 | End Service [STUB] |
+| BAT-WEB-025 | Messages — navigate and verify inbox |
+| BAT-WEB-026 | Embedded mobile resources |
 
 **Module status:**
 
@@ -204,11 +208,12 @@ A parallel BAT suite for the redesigned Homeweb portal (Beta). 21 active tests c
 |--------|--------|-------|
 | Registration | [HOLD] | Standard/DSGDEMO done; MFA, Custom, Eligibility List, Additional Fields, Invite Code pending |
 | Login | [DONE] | DSGDEMO + HHI |
-| Dashboard | [NEXT] | S1 (onboarding TODO), S2, S3 |
+| Onboarding | [DONE] | S1→S2 (5-step flow via `complete_onboarding()`) |
+| Dashboard | [HOLD] | State detection via `get_dashboard_state()` (S1/S2/S3); dedicated dashboard tests pending |
 | Discover | [NEXT] | Mental Health, Wellness, Work-Life |
 | Journey | [NEXT] | Plans, Sessions, Appointments |
 | Smart Care Navigation | [DONE] | All 6 scenarios |
-| Booking | [NEXT] | — |
+| Booking | [DONE] | Full E2E: contact form, provider matching, time selection, confirm; writes S3 to accounts sheet |
 | Profile | [NEXT] | — |
 | Library | [DONE] | Resource Library, Primary Category, Subcategory |
 | Messages | [DONE] | — |
@@ -312,4 +317,4 @@ LANGUAGE=fr pytest tests/build_acceptance/test_bat_homeweb.py --env=prod
 
 ---
 
-*Last updated: 2026-05-04 (reporting consolidated into matrix; test_bat_homeweb.py BAT comments added; booking selector hardened)*
+*Last updated: 2026-05-05 (complete_onboarding hardened: loadingOnboarding waits, bilingual Next/Suivant, keyboard-driven PulseCheck, 6-question assessment with flow/index params)*
