@@ -197,6 +197,125 @@ class Homeweb(BasePage):
         self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
         return True
 
+    def complete_onboarding(self, logger=None, assessment_flow=None, assessment_answer_index=0):
+        from selenium.webdriver.support.ui import Select
+        from selenium.webdriver.support.ui import WebDriverWait
+
+        self.wait.until(
+            expected_conditions.visibility_of_element_located(
+                (By.CLASS_NAME, "section-account-setup")
+            )
+        )
+        if logger:
+            logger("Onboarding: S1 dashboard confirmed")
+
+        NEXT = (By.XPATH, "//button[normalize-space()='Next' or normalize-space()='Suivant']")
+
+        def _click_next():
+            self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingOnboarding")))
+            self.wait.until(expected_conditions.element_to_be_clickable(NEXT))
+            self.click_element(*NEXT)
+
+        def _select(element_id, method, value):
+            el = self.driver.find_element(By.ID, element_id)
+            if method == "value":
+                Select(el).select_by_value(value)
+            else:
+                Select(el).select_by_visible_text(value)
+            self.driver.execute_script(
+                "arguments[0].dispatchEvent(new Event('change', {bubbles: true}));", el
+            )
+
+        # Step 1: Demographics
+        self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingOnboarding")))
+        self.wait.until(
+            expected_conditions.visibility_of_element_located((By.ID, "prefLanguage"))
+        )
+        lang_val = "fr" if self.language == "fr" else "en"
+        _select("prefLanguage", "value", lang_val)
+        _select("extGenderKey", "value", "prefnotspec")
+        _select("extPronounKey", "text", "Prefer not to specify")
+        _select("timezone", "value", "America/Toronto")
+        _click_next()
+        if logger:
+            logger("Step 1: Demographics completed")
+
+        # Step 2: Address (skip)
+        self.wait.until(
+            expected_conditions.visibility_of_element_located(
+                (By.XPATH, "//button[contains(normalize-space(), 'Add Address') or contains(normalize-space(), 'Ajouter une adresse')]")
+            )
+        )
+        _click_next()
+        if logger:
+            logger("Step 2: Address skipped")
+
+        # Step 3: Dependents (skip)
+        self.wait.until(
+            expected_conditions.visibility_of_element_located(
+                (By.XPATH, "//button[contains(normalize-space(), 'Add Dependent') or contains(normalize-space(), 'Ajouter une personne à charge')]")
+            )
+        )
+        _click_next()
+        if logger:
+            logger("Step 3: Dependents skipped")
+
+        # Step 4: PulseCheck — keyboard-drive slider to "Getting by" (2 steps from HOME), then Next
+        self.wait.until(
+            expected_conditions.visibility_of_element_located(
+                (By.CLASS_NAME, "form-section-pulsecheck")
+            )
+        )
+        slider = self.wait.until(expected_conditions.element_to_be_clickable((By.ID, "currentFeeling")))
+        slider.click()
+        slider.send_keys(Keys.HOME)
+        for _ in range(PulseCheck.STEPS["gettingBy"]):
+            slider.send_keys(Keys.ARROW_RIGHT)
+        _click_next()
+        if logger:
+            logger("Step 4: PulseCheck completed")
+
+        # Step 5: Assessment — PHQ-2 (2q), GAD-2 (2q), PCL-2 (2q) = 6 questions total
+        # loadingOnboarding cleared at start of each iteration to handle cross-assessment transitions
+        self.wait.until(
+            expected_conditions.visibility_of_element_located(
+                (By.CLASS_NAME, "form-section-assessment")
+            )
+        )
+        answered = 0
+        for step in range(6):
+            self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingOnboarding")))
+            answers = self.wait.until(
+                expected_conditions.presence_of_all_elements_located(
+                    (By.CSS_SELECTOR, ".item-question-assessment:not([style*='display: none']) .btn-answer")
+                )
+            )
+            if assessment_flow and step < len(assessment_flow):
+                index = assessment_flow[step]
+            elif assessment_answer_index == "random":
+                index = random.randrange(len(answers))
+            else:
+                index = assessment_answer_index
+            selected = answers[min(index, len(answers) - 1)]
+            if logger:
+                logger(f"Assessment Q{step + 1}: [{index}] {selected.text.strip()}")
+            self.wait.until(expected_conditions.element_to_be_clickable(selected)).click()
+            answered += 1
+
+        # Onboarding complete — dashboard transitions to S2
+        self.wait.until(
+            expected_conditions.invisibility_of_element_located(
+                (By.CLASS_NAME, "section-account-setup")
+            )
+        )
+        self.wait.until(
+            expected_conditions.visibility_of_element_located(
+                (By.CLASS_NAME, "section-my-services")
+            )
+        )
+        if logger:
+            logger(f"Step 5: Assessment completed ({answered} questions) | Dashboard: S2")
+
     def wait_for_resource_content(self):
         self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
         return self.wait.until(

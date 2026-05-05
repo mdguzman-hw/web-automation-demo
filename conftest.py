@@ -25,6 +25,7 @@ _versions = {}  # {"PROD": {"Homeweb": "v3.0.17.261", ...}, "BETA": {...}}
 _pending_output = {}  # {nodeid: [messages...]}
 _all_results = []  # [(nodeid, phase, skip_reason, stdout), ...]
 _test_metadata = {}  # {func_name: {"id": "BAT-WEB-001", "description": "...", "suite": "..."}}
+_accounts_registered_this_run = []  # appended by record_account; used by registered_this_run fixture
 
 
 def _pct(r):
@@ -579,8 +580,16 @@ def record_account():
             "Yes" if marketing_opt_in else "No",
         ])
         wb.save(ACCOUNTS_PATH)
+        _accounts_registered_this_run.append(email)
 
     return _record
+
+
+@pytest.fixture(scope="session")
+def registered_this_run():
+    # TODO: fallback — scan registered-accounts.xlsx for rows with Dashboard=S1 to support
+    #       onboarding test against a pre-existing fresh account, not just same-session registrations
+    return _accounts_registered_this_run
 
 
 @pytest.fixture(scope="session")
