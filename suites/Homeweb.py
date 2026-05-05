@@ -97,7 +97,6 @@ class Homeweb(BasePage):
             expected_conditions.visibility_of_element_located((By.CLASS_NAME, "container-messages"))
         )
 
-
     def navigate_pulsecheck(self):
         self.navigate_dashboard()
         dashboard_tiles = self.get_dashboard_tiles()
@@ -197,6 +196,18 @@ class Homeweb(BasePage):
         self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
         return True
 
+    def get_dashboard_state(self):
+        """Returns 'S1' (onboarding), 'S2' (services), or 'S3' (sessions + services)."""
+        if self.driver.find_elements(By.CLASS_NAME, "section-account-setup"):
+            return "S1"
+        has_services = bool(self.driver.find_elements(By.CLASS_NAME, "section-my-services"))
+        has_sessions = bool(self.driver.find_elements(By.CLASS_NAME, "section-sessions"))
+        if has_sessions and has_services:
+            return "S3"
+        if has_services:
+            return "S2"
+        return None
+
     def complete_onboarding(self, logger=None, assessment_flow=None, assessment_answer_index=0):
         from selenium.webdriver.support.ui import Select
         from selenium.webdriver.support.ui import WebDriverWait
@@ -266,6 +277,7 @@ class Homeweb(BasePage):
                 (By.CLASS_NAME, "form-section-pulsecheck")
             )
         )
+        self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingOnboarding")))
         slider = self.wait.until(expected_conditions.element_to_be_clickable((By.ID, "currentFeeling")))
         slider.click()
         slider.send_keys(Keys.HOME)
@@ -276,7 +288,7 @@ class Homeweb(BasePage):
             logger("Step 4: PulseCheck completed")
 
         # Step 5: Assessment — PHQ-2 (2q), GAD-2 (2q), PCL-2 (2q) = 6 questions total
-        # loadingOnboarding cleared at start of each iteration to handle cross-assessment transitions
+        # loading-container cleared at start of each iteration to handle cross-assessment transitions
         self.wait.until(
             expected_conditions.visibility_of_element_located(
                 (By.CLASS_NAME, "form-section-assessment")
@@ -393,6 +405,7 @@ class Homeweb(BasePage):
         )
 
     def logout(self):
+        self.driver.execute_script("window.scrollTo(0, 0)")
         header = self.header
         header_buttons = header.elements["buttons"]
         header.click_element(By.CLASS_NAME, header_buttons["menu"])
@@ -492,6 +505,46 @@ class Homeweb(BasePage):
 
         return True
 
+    def wait_for_provider_matching(self):
+        self.wait.until(lambda d: "matching" in d.current_url.lower() or "cache" in d.current_url.lower())
+        self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPriorityMatches")))
+        self.wait.until(expected_conditions.visibility_of_element_located((By.CLASS_NAME, "section-priority-results")))
+        # TODO: assert item-meetnow-priority is present and validate its state (Busy/Available)
+        return True
+
+    def select_first_available_provider(self):
+        pick_different_text = "Choisissez une autre personne" if self.language == "fr" else "Pick a different person"
+
+        # Priority results path — click first available time slot
+        priority_btns = self.driver.find_elements(By.CSS_SELECTOR, ".section-priority-results .item-booking-option .btn-time")
+        if priority_btns:
+            self.wait.until(expected_conditions.element_to_be_clickable(
+                (By.CSS_SELECTOR, ".section-priority-results .item-booking-option .btn-time")
+            )).click()
+            return
+
+        # Fallback: col-provider-list — wait for results to load then iterate until schedulable
+        self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
+
+        index = 0
+        while True:
+            providers = self.driver.find_elements(By.CSS_SELECTOR, ".col-provider-list .item-booking-option")
+            if index >= len(providers):
+                raise Exception(f"No schedulable provider found after trying {index} provider(s)")
+
+            providers[index].click()
+
+            # Wait for provider detail page
+            self.wait.until(lambda d: "provider-detail" in d.current_url.lower())
+
+            if "noSchedule=true" in self.driver.current_url:
+                self.click_element(By.LINK_TEXT, pick_different_text)
+                self.wait.until(lambda d: "matching" in d.current_url.lower() or "cache" in d.current_url.lower())
+                self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
+                index += 1
+            else:
+                return
+
     def wait_for_booking_details(self):
         provider_detail_endpoint = "/provider-detail" if self.env == "beta" else "/detail"
         self.wait.until(lambda d: "homeweb/booking" in d.current_url.lower() and provider_detail_endpoint in d.current_url.lower())
@@ -507,24 +560,6 @@ class Homeweb(BasePage):
         self.wait.until(
             expected_conditions.visibility_of_element_located((By.CLASS_NAME, "section-booking"))
         )
-
-        return True
-
-        # TODO TEST: Resource Libraru
-        # def wait_for_resources(self):
-        #     resources_endpoint = "/resources"
-        #     self.wait.until(lambda d: resources_endpoint in d.current_url.lower())
-        #
-        #     self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
-        #
-        #     self.wait.until(
-        #         expected_conditions.visibility_of_element_located((By.CLASS_NAME, "controller-content"))
-        #     )
-        #
-        #     expected_active = "Santé mentale" if self.language == "fr" else "Mental Health"
-        #     active_item = self.driver.find_element(By.CSS_SELECTOR, "#categoryNav li.active > a").text.strip()
-        #     print (active_item)
-        #     assert expected_active in active_item
 
         return True
 
@@ -578,19 +613,6 @@ class Homeweb(BasePage):
         self.click_element(By.CSS_SELECTOR, "button.btn-continue:not(.disabled)")
         self.wait.until(lambda d: "wellness/pulsecheck" not in d.current_url.lower())
 
-        # input("Pulsecheck completed, press enter to continue...")
-
-    # def wait_for_booking_confirmation(self):
-    #     booking_confirmation_endpoint = "/homeweb/booking/confirm"
-    #     self.wait.until(lambda d: booking_confirm_endpoint in d.current_url.lower())
-    #
-    #     self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
-    #
-    #     self.wait.until(
-    #         expected_conditions.visibility_of_element_located((By.CLASS_NAME, "dsg-inner"))
-    #     )
-    #
-    #     return True
 
     def complete_enbridge_login_modal(self):
         self.wait.until(
@@ -1103,6 +1125,79 @@ class Homeweb(BasePage):
             if "homeweb/meetnow" in self.driver.current_url.lower():
                 self.click_element(By.CSS_SELECTOR, "a.btn-answer")
 
+    def complete_booking_contact_form(self, email, phone,
+                                      address_type, street_address,
+                                      postal_code, message_permission, comments=""):
+        from selenium.webdriver.support.ui import Select as _Select
+
+        # 1: Wait for Step 1 contact form
+        self.wait.until(expected_conditions.visibility_of_element_located((By.ID, "form-contact-info")))
+
+        # 2: Add Address - Open modal, fill form, save
+        self.click_element(By.XPATH, "//a[@data-bs-target='#modal-select-address']")
+        self.wait.until(expected_conditions.visibility_of_element_located(
+            (By.CSS_SELECTOR, "#modal-select-address .modal-content")
+        ))
+        # 2.1: Address Type, Street Address, Postal Code
+        _Select(self.driver.find_element(By.ID, "addressType")).select_by_value(address_type)
+        self.driver.find_element(By.ID, "streetAddress").send_keys(street_address)
+        self.driver.find_element(By.ID, "postalCode").send_keys(postal_code)
+
+        # TODO: support explicit province/city params (default None = random)
+        # 2.2 Province: wait for modal loading to clear, then pick randomly
+        self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingOnboarding")))
+        self.wait.until(lambda d: len([o for o in d.find_elements(By.CSS_SELECTOR, "#jurisdiction option") if o.get_attribute("value")]) > 0)
+        province_select = _Select(self.wait.until(expected_conditions.element_to_be_clickable((By.ID, "jurisdiction"))))
+        province_options = [o.text for o in province_select.options if o.get_attribute("value")]
+        current_province = province_select.first_selected_option.text
+        current_cities = [o.text for o in self.driver.find_element(By.ID, "city").find_elements(By.TAG_NAME, "option")]
+        selected_province = random.choice(province_options)
+        province_select.select_by_visible_text(selected_province)
+
+        if selected_province != current_province:
+            def city_reloaded(driver):
+                try:
+                    return [o.text for o in driver.find_element(By.ID, "city").find_elements(By.TAG_NAME, "option")] != current_cities
+                except StaleElementReferenceException:
+                    return False
+
+            self.wait.until(city_reloaded)
+
+        # 2.3 Province: pick city randomly once loaded after province selection
+        city_select = _Select(self.wait.until(expected_conditions.element_to_be_clickable((By.ID, "city"))))
+        city_options = [o.text for o in city_select.options if o.get_attribute("value")]
+        selected_city = random.choice(city_options)
+        city_select.select_by_visible_text(selected_city)
+
+        # 2.4: Save address — button is enabled once required fields are filled
+        self.click_element(By.XPATH, "//div[@id='modal-select-address']//button[contains(normalize-space(), 'Add Address')]")
+
+        # 2.5: Select Address - "Change Address" confirmation modal appears next — click Select to confirm
+        self.click_element(By.XPATH, "//div[@id='modal-select-address']//button[normalize-space()='Select']")
+        self.wait.until(expected_conditions.invisibility_of_element_located(
+            (By.CSS_SELECTOR, "#modal-select-address .modal-content")
+        ))
+
+        # 3: Phone number (pattern: 10 digits, no spaces)
+        phone_field = self.wait.until(expected_conditions.element_to_be_clickable((By.ID, "phoneNumber")))
+        phone_field.clear()
+        phone_field.send_keys(phone)
+
+        # 4: Email (pre-filled on existing accounts, clear and set to ensure correct value)
+        email_field = self.driver.find_element(By.ID, "email")
+        email_field.clear()
+        email_field.send_keys(email)
+
+        # 5: Message permission — "1"=Open, "2"=Discreet, "3"=None
+        _Select(self.driver.find_element(By.ID, "messagePermission")).select_by_value(message_permission)
+
+        # 6: Optional comments
+        if comments:
+            self.driver.find_element(By.ID, "comments").send_keys(comments)
+
+        # 7: Submit
+        self.click_element(By.CSS_SELECTOR, "button.submit-inner")
+
     def continue_booking(self, topic):
         continue_text = "Reprendre la prise du rendez-vous" if self.language == "fr" else "Continue to Booking"
 
@@ -1330,5 +1425,6 @@ class ProviderTile:
     def select_random_time(self):
         times = self.available_times
         random.choice(times).click()
+
 
 Homeweb.PulseCheck = PulseCheck
