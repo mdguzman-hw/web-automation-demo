@@ -406,12 +406,15 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
 
 
 @pytest.fixture(scope="session")
-def driver(env):
+def driver(request, env):
     # 1: Configure Chrome options
     chrome_options = Options()
     # chrome_options.add_argument("--start-maximized")
     chrome_options.add_argument("--incognito")
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    if not request.config.getoption("--headed"):
+        chrome_options.add_argument("--headless=new")
+        chrome_options.add_argument("--window-size=1920,1080")
 
     # 2: Launch Browser
     driver_instance = webdriver.Chrome(options=chrome_options)
@@ -429,6 +432,12 @@ def pytest_addoption(parser):
         action="store",
         default="all",
         help="Environment: prod | beta | local | all (default: all)"
+    )
+    parser.addoption(
+        "--headed",
+        action="store_true",
+        default=False,
+        help="Run Chrome in headed (visible) mode instead of headless"
     )
 
 
