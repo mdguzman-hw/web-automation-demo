@@ -26,6 +26,8 @@ _pending_output = {}  # {nodeid: [messages...]}
 _all_results = []  # [(nodeid, phase, skip_reason, stdout), ...]
 _test_metadata = {}  # {func_name: {"id": "BAT-WEB-001", "description": "...", "suite": "..."}}
 _accounts_registered_this_run = []  # appended by record_account; used by registered_this_run fixture
+_session_start = None
+_env_durations = {}  # {"PROD": seconds, "BETA": seconds, "LOCAL": seconds}
 
 
 def _pct(r):
@@ -124,6 +126,9 @@ def pytest_runtest_logreport(report):
 
     _env_results[env][phase] += 1
 
+    if report.when == "call":
+        _env_durations[env] = _env_durations.get(env, 0.0) + (report.duration or 0.0)
+
 
 def pytest_collection_finish(session):
     import re
@@ -167,7 +172,7 @@ def pytest_collection_finish(session):
         }
 
 
-def _write_test_matrix_xlsx(report_name, active_envs, run_time="-"):
+def _write_test_matrix_xlsx(report_name, active_envs, run_time="-", env_times=None):
     import re
     import openpyxl
     from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
@@ -336,15 +341,25 @@ def _write_test_matrix_xlsx(report_name, active_envs, run_time="-"):
         ws.cell(row=totals_row, column=col, value=pct).alignment = center
 
     totals_row += 1
-    c = ws.cell(row=totals_row, column=LOGS_COL, value="Run Time")
+    c = ws.cell(row=totals_row, column=LOGS_COL, value=f"Run Time  ({run_time} total)")
     c.font = header_font
     c.alignment = right_bold
-    first_env_col = min(env_cols.values())
-    ws.cell(row=totals_row, column=first_env_col, value=run_time).alignment = center
+    if env_times:
+        for env, col in env_cols.items():
+            ws.cell(row=totals_row, column=col, value=env_times.get(env, "-")).alignment = center
+    else:
+        first_env_col = min(env_cols.values())
+        ws.cell(row=totals_row, column=first_env_col, value=run_time).alignment = center
 
     path = f"{_reports_dir}/{_run_timestamp}_{report_name}_report.xlsx"
     wb.save(path)
     return path
+
+
+def pytest_sessionstart(session):
+    global _session_start
+    import time
+    _session_start = time.monotonic()
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
@@ -360,8 +375,15 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
     total_run = total_passed + total_failed
     total_pct = f"{int(total_passed / total_run * 100)}%" if total_run > 0 else "N/A"
 
-    duration = getattr(terminalreporter, "_sessionduration", None)
+    import time
+    duration = (time.monotonic() - _session_start) if _session_start is not None else None
     run_time = f"{int(duration // 60)}m {int(duration % 60)}s" if duration is not None else "N/A"
+
+    def _fmt_env_time(env):
+        secs = _env_durations.get(env, 0)
+        return f"{int(secs // 60)}m {int(secs % 60)}s" if secs > 0 else "N/A"
+
+    env_times = {env: _fmt_env_time(env) for env in ["PROD", "BETA", "LOCAL"]}
 
     sep = "-" * 62
     terminalreporter.write_sep("=", "TEST REPORT")
@@ -389,6 +411,8 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
     terminalreporter.write_line(f"{'Total Failed':<35} {total_failed:>7}")
     terminalreporter.write_line(f"{'Total Not Run':<35} {total_skipped:>7}")
     terminalreporter.write_line(f"{'Total Percentage Passed':<35} {total_pct:>7}")
+    terminalreporter.write_line(f"{'Run Time (per env)':<35} {env_times['PROD']:>7} {env_times['BETA']:>7} {env_times['LOCAL']:>7}")
+    terminalreporter.write_line(f"{'Run Time (total)':<35} {run_time:>7}")
 
     file_args = [a for a in config.invocation_params.args if a.endswith(".py")]
     if file_args:
@@ -400,7 +424,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
     if _test_metadata:
         os.makedirs(_reports_dir, exist_ok=True)
         active_envs = [e for e in ["PROD", "BETA", "LOCAL"] if e in _env_results]
-        matrix_path = _write_test_matrix_xlsx(report_name, active_envs, run_time)
+        matrix_path = _write_test_matrix_xlsx(report_name, active_envs, run_time, env_times)
         short_path = matrix_path.replace("reports/", "/")
         terminalreporter.write_line(f"\n  Report saved: {short_path}")
 
