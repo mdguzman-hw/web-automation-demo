@@ -107,6 +107,7 @@
 | 14 | **`col-provider-list` provider selector unconfirmed** | Low | `select_first_available_provider` fallback uses `.col-provider-list .item-booking-option` — selector assumed from priority results pattern. Needs verification against actual DOM when no priority matches are present. |
 | 15 | **`StaleElementReferenceException` still used in city dropdown** | Low | City reload check in `Homeweb.py` still uses try/except on stale element. TODO to replace with JS atomic read once backwards compatibility confirmed. |
 | 16 | **TODO: Investigate PROD booking selectors against new portal UI** | Medium | `btn-primary` button selector fixed; time slot and modality selectors in `select_booking_options` PROD branch may also diverge as new portal rolls out to PROD. |
+| 17 | **`logger` null-check pattern in `Homeweb.py`** | Low | `complete_onboarding` and `complete_assessment` use `if logger: logger(...)` guards (7 occurrences) and an inconsistent `(logger or print)(...)` in `complete_assessment`. Could be cleaned up by defaulting `logger=lambda *_: None` and calling `logger(...)` directly. |
 
 ---
 
