@@ -47,7 +47,9 @@ class BasePage:
     def take_screenshot(self, name, logger=None):
         from conftest import _run_timestamp, _reports_dir
         os.makedirs(_reports_dir, exist_ok=True)
-        filename = f"{_run_timestamp}_{name}.png"
+        env = getattr(self, "env", "")
+        env_suffix = f"_{env.upper()}" if env else ""
+        filename = f"{_run_timestamp}_{name}{env_suffix}.png"
         self.driver.save_screenshot(f"{_reports_dir}/{filename}")
         if logger:
             logger(f"Screenshot saved: {filename}")

@@ -116,6 +116,8 @@ def pytest_runtest_logreport(report):
         env = "PROD"
     elif "[BETA]" in name:
         env = "BETA"
+    elif "[STAGING]" in name:
+        env = "STAGING"
     elif "[LOCAL]" in name:
         env = "LOCAL"
     else:
@@ -234,8 +236,9 @@ def _write_test_matrix_xlsx(report_name, active_envs, run_time="-", env_times=No
     hdr_cell(1, 1, "ID")
     hdr_cell(1, 2, "Description")
     hdr_cell(1, LOGS_COL, "Logs")
+    _env_display = {"STAGING": "STG"}
     for env, col in env_cols.items():
-        hdr_cell(1, col, env)
+        hdr_cell(1, col, _env_display.get(env, env))
 
     # --- column widths ---
     ws.column_dimensions["A"].width = 16
@@ -252,12 +255,12 @@ def _write_test_matrix_xlsx(report_name, active_envs, run_time="-", env_times=No
         data_cell(row, 1, meta["id"])
         data_cell(row, 2, meta["description"])
 
-        # Logs: stdout from any env; append failure detail for failed envs
-        logs = next(
-            (test_stdout.get(func_name, {}).get(env, "").strip()
-             for env in active_envs if test_stdout.get(func_name, {}).get(env, "").strip()),
-            ""
-        )
+        # Logs: append stdout from each env (prefixed), then failure details
+        log_parts = []
+        for env in active_envs:
+            stdout = test_stdout.get(func_name, {}).get(env, "").strip()
+            if stdout:
+                log_parts.append(f"[{env}]\n{stdout}")
         for env in active_envs:
             if test_phases.get(func_name, {}).get(env) == "FAILED":
                 detail = test_detail.get(func_name, {}).get(env, "")
@@ -276,7 +279,8 @@ def _write_test_matrix_xlsx(report_name, active_envs, run_time="-", env_times=No
                     )
                     summary = " | ".join(filter(None, [code_ref, exc_msg]))
                     if summary:
-                        logs = (logs + "\n" if logs else "") + f"[{env} FAILED] {summary[:200]}"
+                        log_parts.append(f"[{env} FAILED] {summary[:200]}")
+        logs = "\n".join(log_parts)
         c = data_cell(row, LOGS_COL, logs or "-")
         if logs:
             ws.row_dimensions[row].height = max(15, logs.count("\n") * 15 + 15)
@@ -366,7 +370,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
     if not _env_results:
         return
 
-    envs = ["PROD", "BETA", "LOCAL"]
+    envs = ["PROD", "BETA", "STAGING", "LOCAL"]
     results = {e: _env_results.get(e, {"passed": 0, "failed": 0, "skipped": 0}) for e in envs}
 
     total_passed = sum(r["passed"] for r in results.values())
@@ -383,35 +387,37 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
         secs = _env_durations.get(env, 0)
         return f"{int(secs // 60)}m {int(secs % 60)}s" if secs > 0 else "N/A"
 
-    env_times = {env: _fmt_env_time(env) for env in ["PROD", "BETA", "LOCAL"]}
+    env_times = {env: _fmt_env_time(env) for env in ["PROD", "BETA", "STAGING", "LOCAL"]}
 
-    sep = "-" * 62
+    sep = "-" * 70
     terminalreporter.write_sep("=", "TEST REPORT")
 
     if _versions:
-        prod_lines  = [f"{k}: {v}" for k, v in _versions.get("PROD",  {}).items()]
-        beta_lines  = [f"{k}: {v}" for k, v in _versions.get("BETA",  {}).items()]
-        local_lines = [f"{k}: {v}" for k, v in _versions.get("LOCAL", {}).items()]
-        for i in range(max(len(prod_lines), len(beta_lines), len(local_lines))):
-            p = prod_lines[i]  if i < len(prod_lines)  else ""
-            b = beta_lines[i]  if i < len(beta_lines)  else ""
-            l = local_lines[i] if i < len(local_lines) else ""
-            terminalreporter.write_line(f"  {p:<33} {b:<20} {l}")
+        prod_lines    = [f"{k}: {v}" for k, v in _versions.get("PROD",    {}).items()]
+        beta_lines    = [f"{k}: {v}" for k, v in _versions.get("BETA",    {}).items()]
+        staging_lines = [f"{k}: {v}" for k, v in _versions.get("STAGING", {}).items()]
+        local_lines   = [f"{k}: {v}" for k, v in _versions.get("LOCAL",   {}).items()]
+        for i in range(max(len(prod_lines), len(beta_lines), len(staging_lines), len(local_lines))):
+            p = prod_lines[i]    if i < len(prod_lines)    else ""
+            b = beta_lines[i]    if i < len(beta_lines)    else ""
+            s = staging_lines[i] if i < len(staging_lines) else ""
+            l = local_lines[i]   if i < len(local_lines)   else ""
+            terminalreporter.write_line(f"  {p:<33} {b:<20} {s:<20} {l}")
         terminalreporter.write_line("")
 
-    terminalreporter.write_line(f"{'Metric':<35} {'PROD':>7} {'BETA':>7} {'LOCAL':>7}")
+    terminalreporter.write_line(f"{'Metric':<35} {'PROD':>7} {'BETA':>7} {'STG':>7} {'LOCAL':>7}")
     terminalreporter.write_line(sep)
-    terminalreporter.write_line(f"{'Passed':<35} {results['PROD']['passed']:>7} {results['BETA']['passed']:>7} {results['LOCAL']['passed']:>7}")
-    terminalreporter.write_line(f"{'Failed':<35} {results['PROD']['failed']:>7} {results['BETA']['failed']:>7} {results['LOCAL']['failed']:>7}")
-    terminalreporter.write_line(f"{'Not Run (Skipped, N/A, etc.)':<35} {results['PROD']['skipped']:>7} {results['BETA']['skipped']:>7} {results['LOCAL']['skipped']:>7}")
-    terminalreporter.write_line(f"{'Completed':<35} {results['PROD']['passed'] + results['PROD']['failed']:>7} {results['BETA']['passed'] + results['BETA']['failed']:>7} {results['LOCAL']['passed'] + results['LOCAL']['failed']:>7}")
-    terminalreporter.write_line(f"{'Percentage Passed':<35} {_pct(results['PROD']):>7} {_pct(results['BETA']):>7} {_pct(results['LOCAL']):>7}")
+    terminalreporter.write_line(f"{'Passed':<35} {results['PROD']['passed']:>7} {results['BETA']['passed']:>7} {results['STAGING']['passed']:>7} {results['LOCAL']['passed']:>7}")
+    terminalreporter.write_line(f"{'Failed':<35} {results['PROD']['failed']:>7} {results['BETA']['failed']:>7} {results['STAGING']['failed']:>7} {results['LOCAL']['failed']:>7}")
+    terminalreporter.write_line(f"{'Not Run (Skipped, N/A, etc.)':<35} {results['PROD']['skipped']:>7} {results['BETA']['skipped']:>7} {results['STAGING']['skipped']:>7} {results['LOCAL']['skipped']:>7}")
+    terminalreporter.write_line(f"{'Completed':<35} {results['PROD']['passed'] + results['PROD']['failed']:>7} {results['BETA']['passed'] + results['BETA']['failed']:>7} {results['STAGING']['passed'] + results['STAGING']['failed']:>7} {results['LOCAL']['passed'] + results['LOCAL']['failed']:>7}")
+    terminalreporter.write_line(f"{'Percentage Passed':<35} {_pct(results['PROD']):>7} {_pct(results['BETA']):>7} {_pct(results['STAGING']):>7} {_pct(results['LOCAL']):>7}")
     terminalreporter.write_line(sep)
     terminalreporter.write_line(f"{'Total Passed':<35} {total_passed:>7}")
     terminalreporter.write_line(f"{'Total Failed':<35} {total_failed:>7}")
     terminalreporter.write_line(f"{'Total Not Run':<35} {total_skipped:>7}")
     terminalreporter.write_line(f"{'Total Percentage Passed':<35} {total_pct:>7}")
-    terminalreporter.write_line(f"{'Run Time (per env)':<35} {env_times['PROD']:>7} {env_times['BETA']:>7} {env_times['LOCAL']:>7}")
+    terminalreporter.write_line(f"{'Run Time (per env)':<35} {env_times['PROD']:>7} {env_times['BETA']:>7} {env_times['STAGING']:>7} {env_times['LOCAL']:>7}")
     terminalreporter.write_line(f"{'Run Time (total)':<35} {run_time:>7}")
 
     file_args = [a for a in config.invocation_params.args if a.endswith(".py")]
@@ -423,7 +429,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
 
     if _test_metadata:
         os.makedirs(_reports_dir, exist_ok=True)
-        active_envs = [e for e in ["PROD", "BETA", "LOCAL"] if e in _env_results]
+        active_envs = [e for e in ["PROD", "BETA", "STAGING", "LOCAL"] if e in _env_results]
         matrix_path = _write_test_matrix_xlsx(report_name, active_envs, run_time, env_times)
         short_path = matrix_path.replace("reports/", "/")
         terminalreporter.write_line(f"\n  Report saved: {short_path}")
@@ -455,7 +461,7 @@ def pytest_addoption(parser):
         "--env",
         action="store",
         default="all",
-        help="Environment: prod | beta | local | all (default: all)"
+        help="Environment: prod | beta | staging | local | all (default: all)"
     )
     parser.addoption(
         "--headed",
@@ -478,19 +484,21 @@ def pytest_collection_modifyitems(items):
             env = 0
         elif "[BETA]" in name:
             env = 1
-        elif "[LOCAL]" in name:
+        elif "[STAGING]" in name:
             env = 2
+        elif "[LOCAL]" in name:
+            env = 3
         elif "_beta" in name.lower():
             env = 1
         else:
-            env = 3
+            env = 4
 
         return env, order
 
     items.sort(key=get_group)
 
 
-@pytest.fixture(params=["prod", "beta", "local"], ids=["PROD", "BETA", "LOCAL"], scope="session")
+@pytest.fixture(params=["prod", "beta", "staging", "local"], ids=["PROD", "BETA", "STAGING", "LOCAL"], scope="session")
 def env(request):
     env_flag = request.config.getoption("--env")
 
@@ -541,6 +549,10 @@ def credentials():
         "dsgdemo_s3": {
             "email": os.getenv("DSGDEMO_S3_EMAIL"),
             "password": os.getenv("DSGDEMO_S3_PASSWORD")
+        },
+        "mdg_test": {
+            "email": os.getenv("MDG_TEST_EMAIL"),
+            "password": os.getenv("MDG_TEST_PASSWORD")
         }
     }
 
@@ -589,29 +601,46 @@ def sentio_provider(driver, language, env, quantum, quantum_prod):
         return SentioProvider(driver, language, env, quantum_prod)
 
 
+def _accounts_sheet_name(env):
+    """BETA and PROD share the PROD DB — both write to the PROD sheet."""
+    if env == "staging":
+        return "SIT"
+    if env == "local":
+        return "LOCAL"
+    return "PROD"
+
+
+def _get_or_create_accounts_sheet(wb, sheet_name, headers):
+    if sheet_name in wb.sheetnames:
+        return wb[sheet_name]
+    ws = wb.create_sheet(sheet_name)
+    ws.append(headers)
+    return ws
+
+
 @pytest.fixture(scope="function")
-def record_account():
+def record_account(env):
     import openpyxl
 
     HEADERS = ["Date", "Timestamp", "Env", "Org", "Division", "Role",
                "First Name", "Last Name", "Preferred Name", "Email", "DOB", "Password", "Marketing Opt-in", "Dashboard"]
     ACCOUNTS_PATH = "reports/registered-accounts.xlsx"
+    sheet_name = _accounts_sheet_name(env)
 
     def _record(env, org, division, role, first_name, last_name, preferred_name, email, dob, password, marketing_opt_in):
         os.makedirs("reports", exist_ok=True)
         if os.path.exists(ACCOUNTS_PATH):
             wb = openpyxl.load_workbook(ACCOUNTS_PATH)
-            ws = wb.active
         else:
             wb = openpyxl.Workbook()
-            ws = wb.active
-            ws.title = "Registered Accounts"
-            ws.append(HEADERS)
+            del wb[wb.sheetnames[0]]  # remove default "Sheet"
 
+        _env_label = {"staging": "STG"}.get(env, env.upper())
+        ws = _get_or_create_accounts_sheet(wb, sheet_name, HEADERS)
         ws.append([
             _run_timestamp[4:6] + "-" + _run_timestamp[6:8] + "-" + _run_timestamp[:4],
             _run_timestamp,
-            env.upper(),
+            _env_label,
             org,
             division,
             role,
@@ -638,39 +667,47 @@ def registered_this_run():
 
 
 @pytest.fixture(scope="session")
-def latest_registered_account():
+def latest_registered_account(env):
     import openpyxl
 
     ACCOUNTS_PATH = "reports/registered-accounts.xlsx"
     HEADERS = ["Date", "Timestamp", "Env", "Org", "Division", "Role",
                "First Name", "Last Name", "Preferred Name", "Email", "DOB", "Password", "Marketing Opt-in", "Dashboard"]
+    sheet_name = _accounts_sheet_name(env)
 
     if not os.path.exists(ACCOUNTS_PATH):
         pytest.skip("No registered accounts found — run test_bat_web_003 first")
 
     wb = openpyxl.load_workbook(ACCOUNTS_PATH)
-    ws = wb.active
+
+    if sheet_name not in wb.sheetnames:
+        pytest.skip(f"No registered accounts found for {sheet_name} — run test_bat_web_003 first")
+
+    ws = wb[sheet_name]
 
     if ws.max_row < 2:
-        pytest.skip("No registered accounts found — run test_bat_web_003 first")
+        pytest.skip(f"No registered accounts found for {sheet_name} — run test_bat_web_003 first")
 
     values = [ws.cell(row=ws.max_row, column=i + 1).value for i in range(len(HEADERS))]
     return dict(zip(HEADERS, values))
 
 
 @pytest.fixture(scope="session")
-def update_account_dashboard():
+def update_account_dashboard(env):
     import openpyxl
 
     ACCOUNTS_PATH = "reports/registered-accounts.xlsx"
     TIMESTAMP_COL = 2   # "Timestamp" column (1-based)
     DASHBOARD_COL = 14  # "Dashboard" column (1-based)
+    sheet_name = _accounts_sheet_name(env)
 
     def _update(state):
         if not os.path.exists(ACCOUNTS_PATH):
             return
         wb = openpyxl.load_workbook(ACCOUNTS_PATH)
-        ws = wb.active
+        if sheet_name not in wb.sheetnames:
+            return
+        ws = wb[sheet_name]
         for row in ws.iter_rows(min_row=2):
             if row[TIMESTAMP_COL - 1].value == _run_timestamp:
                 row[DASHBOARD_COL - 1].value = state
