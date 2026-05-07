@@ -13,7 +13,7 @@ from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.wait import WebDriverWait
 
 from core.BasePage import BasePage
-from core.Constants import HOMEWEB_BASE_URL, HOMEWEB_DOMAIN, SENTIO_DOMAIN, LIFESTAGE_DOMAIN, LIFESTYLE_DOMAIN, HOMEWEB_BETA_BASE_URL, HOMEWEB_BETA_DOMAIN, HOMEWEB_LOCAL_BASE_URL, HOMEWEB_LOCAL_DOMAIN
+from core.Constants import HOMEWEB_BASE_URL, HOMEWEB_DOMAIN, SENTIO_DOMAIN, LIFESTAGE_DOMAIN, LIFESTYLE_DOMAIN, HOMEWEB_BETA_BASE_URL, HOMEWEB_BETA_DOMAIN, HOMEWEB_STAGING_BASE_URL, HOMEWEB_STAGING_DOMAIN, HOMEWEB_LOCAL_BASE_URL, HOMEWEB_LOCAL_DOMAIN
 from core.Header import Header
 from selenium.webdriver.support import expected_conditions
 
@@ -31,6 +31,9 @@ class Homeweb(BasePage):
         if env == "prod":
             self.base_url = HOMEWEB_BASE_URL
             self.domain = HOMEWEB_DOMAIN
+        elif env == "staging":
+            self.base_url = HOMEWEB_STAGING_BASE_URL
+            self.domain = HOMEWEB_STAGING_DOMAIN
         elif env == "local":
             self.base_url = HOMEWEB_LOCAL_BASE_URL
             self.domain = HOMEWEB_LOCAL_DOMAIN
@@ -157,6 +160,13 @@ class Homeweb(BasePage):
 
     def get_started(self):
         self.wait.until(expected_conditions.visibility_of_element_located((By.CLASS_NAME, "section-recommendations")))
+        self._click_get_started()
+
+    def get_started_from_journey(self):
+        self.wait.until(expected_conditions.visibility_of_element_located((By.CLASS_NAME, "item-recommendation-card")))
+        self._click_get_started()
+
+    def _click_get_started(self):
         link_text = "Commencer Maintenant" if self.language == "fr" else "Get started"
         self.click_element(By.LINK_TEXT, link_text)
 
@@ -197,14 +207,19 @@ class Homeweb(BasePage):
         return True
 
     def get_dashboard_state(self):
-        """Returns 'S1' (onboarding), 'S2' (services), or 'S3' (sessions + services)."""
+        """Returns 'S1' (onboarding), 'S2' (services), or 'S3' (sessions + services).
+        S2 and S3 also assert section-quick-access is present."""
         if self.driver.find_elements(By.CLASS_NAME, "section-account-setup"):
             return "S1"
         has_services = bool(self.driver.find_elements(By.CLASS_NAME, "section-my-services"))
         has_sessions = bool(self.driver.find_elements(By.CLASS_NAME, "section-sessions"))
         if has_sessions and has_services:
+            assert self.driver.find_elements(By.CLASS_NAME, "section-quick-access"), \
+                "S3 dashboard: section-quick-access not found"
             return "S3"
         if has_services:
+            assert self.driver.find_elements(By.CLASS_NAME, "section-quick-access"), \
+                "S2 dashboard: section-quick-access not found"
             return "S2"
         return None
 
@@ -470,7 +485,7 @@ class Homeweb(BasePage):
 
         self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
 
-        container = "container-confirm-booking" if self.env == "beta" else "container-case-creation"
+        container = "container-confirm-booking" if self.env in ("beta", "staging") else "container-case-creation"
         self.wait.until(
             expected_conditions.visibility_of_element_located((By.CLASS_NAME, container))
         )
@@ -498,7 +513,7 @@ class Homeweb(BasePage):
             expected_conditions.visibility_of_element_located((By.CLASS_NAME, "collection-provider-matches"))
         )
 
-        availability_container = "section-priority-results" if self.env == "beta" else "dp__instance_calendar"
+        availability_container = "section-priority-results" if self.env in ("beta", "staging") else "dp__instance_calendar"
         self.wait.until(
             expected_conditions.visibility_of_element_located((By.CLASS_NAME, availability_container))
         )
@@ -508,45 +523,80 @@ class Homeweb(BasePage):
     def wait_for_provider_matching(self):
         self.wait.until(lambda d: "matching" in d.current_url.lower() or "cache" in d.current_url.lower())
         self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPriorityMatches")))
-        self.wait.until(expected_conditions.visibility_of_element_located((By.CLASS_NAME, "section-priority-results")))
-        # TODO: assert item-meetnow-priority is present and validate its state (Busy/Available)
+        self.wait.until(lambda d:
+            d.find_elements(By.CLASS_NAME, "section-priority-results") or
+            d.find_elements(By.CLASS_NAME, "col-provider-list")
+        )
         return True
+
+    def _provider_has_times(self):
+        """On provider-detail page, cycle through all date ranges and return True if any slot is available."""
+        from selenium.webdriver.support.ui import Select as SeleniumSelect
+        date_selects = self.driver.find_elements(By.ID, "dateRange")
+        if not date_selects:
+            return bool(self.driver.find_elements(By.CSS_SELECTOR, ".provider-times-container label.btn-time"))
+        date_range_select = SeleniumSelect(date_selects[0])
+        for option in date_range_select.options:
+            date_range_select.select_by_value(option.get_attribute("value"))
+            self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
+            if self.driver.find_elements(By.CSS_SELECTOR, ".provider-times-container label.btn-time"):
+                return True
+        return False
 
     def select_first_available_provider(self):
         pick_different_text = "Choisissez une autre personne" if self.language == "fr" else "Pick a different person"
 
-        # Priority results path — click first available time slot
-        priority_btns = self.driver.find_elements(By.CSS_SELECTOR, ".section-priority-results .item-booking-option .btn-time")
-        if priority_btns:
-            self.wait.until(expected_conditions.element_to_be_clickable(
-                (By.CSS_SELECTOR, ".section-priority-results .item-booking-option .btn-time")
-            )).click()
-            return
-
-        # Fallback: col-provider-list — wait for results to load then iterate until schedulable
         self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
 
-        index = 0
-        while True:
-            providers = self.driver.find_elements(By.CSS_SELECTOR, ".col-provider-list .item-booking-option")
-            if index >= len(providers):
-                raise Exception(f"No schedulable provider found after trying {index} provider(s)")
+        from selenium.common.exceptions import TimeoutException as SeleniumTimeoutException
+        from selenium.webdriver.support.ui import WebDriverWait
 
-            providers[index].click()
-
-            # Wait for provider detail page
-            self.wait.until(lambda d: "provider-detail" in d.current_url.lower())
-
-            if "noSchedule=true" in self.driver.current_url:
+        def _click_and_check(provider_el, link_selector):
+            """Click provider link, return True if we land on a bookable provider-detail page."""
+            matching_url = self.driver.current_url
+            link = provider_el.find_element(By.CSS_SELECTOR, link_selector)
+            self.driver.execute_script("arguments[0].click()", link)
+            try:
+                WebDriverWait(self.driver, 6).until(lambda d: "provider-detail" in d.current_url.lower())
+            except SeleniumTimeoutException:
+                # Provider didn't navigate — org/test provider, skip it
+                if self.driver.current_url != matching_url:
+                    self.driver.back()
+                    self.wait.until(lambda d: "matching" in d.current_url.lower() or "cache" in d.current_url.lower())
+                    self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
+                return False
+            self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
+            if "noSchedule=true" in self.driver.current_url or not self._provider_has_times():
                 self.click_element(By.LINK_TEXT, pick_different_text)
                 self.wait.until(lambda d: "matching" in d.current_url.lower() or "cache" in d.current_url.lower())
                 self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
+                return False
+            return True
+
+        def _try_providers(css_container, link_selector, filter_selector=None):
+            index = 0
+            while True:
+                all_items = self.driver.find_elements(By.CSS_SELECTOR, f"{css_container} .item-booking-option")
+                providers = [p for p in all_items if p.find_elements(By.CSS_SELECTOR, link_selector)]
+                if filter_selector:
+                    providers = [p for p in providers if p.find_elements(By.CSS_SELECTOR, filter_selector)]
+                if index >= len(providers):
+                    return False
+                if _click_and_check(providers[index], link_selector):
+                    return True
                 index += 1
-            else:
+
+        # 1. Try priority block — uses a.provider-content
+        if self.driver.find_elements(By.CSS_SELECTOR, ".section-priority-results .item-booking-option"):
+            if _try_providers(".section-priority-results", "a.provider-content"):
                 return
 
+        # 2. Fall through to provider list — uses a.provider-name, individual counsellors only (have accreditations)
+        if not _try_providers(".col-provider-list", "a.provider-name", filter_selector="p.accreditations"):
+            raise Exception("No schedulable provider found in priority block or provider list")
+
     def wait_for_booking_details(self):
-        provider_detail_endpoint = "/provider-detail" if self.env == "beta" else "/detail"
+        provider_detail_endpoint = "/provider-detail" if self.env in ("beta", "staging") else "/detail"
         self.wait.until(lambda d: "homeweb/booking" in d.current_url.lower() and provider_detail_endpoint in d.current_url.lower())
 
         self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
@@ -747,6 +797,131 @@ class Homeweb(BasePage):
             )
         )
         random.choice(radios).click()
+
+    # --- New Portal: End Service flow ---
+
+    def navigate_sessions(self):
+        self.click_element(By.CSS_SELECTOR, "#quickNavList a[href='#sessions']")
+        self.wait.until(expected_conditions.visibility_of_element_located(
+            (By.CSS_SELECTOR, ".section-sessions")
+        ))
+
+    def assert_active_session(self):
+        sessions = self.driver.find_elements(By.CSS_SELECTOR, ".section-sessions .badge-scheduled")
+        assert sessions, "No active scheduled sessions found in section-sessions"
+
+    def click_view_details(self):
+        el = self.wait.until(expected_conditions.presence_of_element_located(
+            (By.CSS_SELECTOR, ".section-sessions .stretched-link")
+        ))
+        self.driver.execute_script("arguments[0].click()", el)
+        self.wait.until(expected_conditions.url_contains("/homeweb/appointment"))
+
+    def wait_for_appointment_page(self):
+        self.wait.until(expected_conditions.url_contains("/homeweb/appointment"))
+        self.wait.until(expected_conditions.visibility_of_element_located(
+            (By.CLASS_NAME, "item-modify-booking")
+        ))
+        return True
+
+    def click_end_services_link(self):
+        self.click_element(By.CSS_SELECTOR, ".item-modify-booking .end-services .btn-link")
+        self.wait.until(expected_conditions.url_contains("/services/end"))
+
+    def wait_for_end_service_confirmation(self):
+        self.wait.until(expected_conditions.url_contains("/services/end"))
+        self.wait.until(expected_conditions.visibility_of_element_located(
+            (By.CSS_SELECTOR, "button.cancel-confirm")
+        ))
+        return True
+
+    def confirm_end_service(self):
+        self.click_element(By.CSS_SELECTOR, "button.cancel-confirm")
+
+    def navigate_journey(self):
+        self.click_element(By.CSS_SELECTOR, "a[href*='/homeweb/journey']")
+        self.wait.until(expected_conditions.url_contains("/homeweb/journey"))
+
+    def wait_for_journey(self):
+        self.wait.until(expected_conditions.url_contains("/homeweb/journey"))
+        self.wait.until(expected_conditions.visibility_of_element_located(
+            (By.ID, "plans-tab")
+        ))
+        return True
+
+    def filter_journey_plans(self, value):
+        from selenium.webdriver.support.ui import Select
+        select_el = self.wait.until(expected_conditions.element_to_be_clickable(
+            (By.ID, "recommendation-type-filter")
+        ))
+        Select(select_el).select_by_value(value)
+
+    def assert_no_plans_match_filter(self):
+        no_results_text = "Aucune recommandation ne correspond à ce filtre" if self.language == "fr" \
+            else "No recommendations match this filter"
+        el = self.wait.until(expected_conditions.visibility_of_element_located(
+            (By.CSS_SELECTOR, ".section-pane .message-results")
+        ))
+        assert no_results_text in el.text, \
+            f"Expected no-results message, got: {el.text.strip()}"
+        return True
+
+    def get_open_plan_id(self):
+        tip = self.wait.until(expected_conditions.presence_of_element_located(
+            (By.XPATH, "//p[contains(@class,'tip') and contains(text(),'Plan ID:')]")
+        ))
+        return tip.text.replace("Plan ID:", "").strip()
+
+    def assert_plan_id_exists(self, plan_id):
+        tips = self.driver.find_elements(
+            By.XPATH, f"//p[contains(@class,'tip') and contains(text(),'Plan ID: {plan_id}')]"
+        )
+        assert tips, f"Plan ID {plan_id} not found — service may have been unexpectedly ended"
+        return True
+
+    # --- New Portal: Cancel Appointment flow ---
+
+    def get_active_appointment_id(self):
+        tip = self.wait.until(expected_conditions.presence_of_element_located(
+            (By.CSS_SELECTOR, ".section-sessions .tip")
+        ))
+        spans = tip.find_elements(By.TAG_NAME, "span")
+        return spans[-1].text.strip() if spans else None
+
+    def navigate_journey_sessions(self):
+        self.click_element(By.CSS_SELECTOR, "#quickNavList a[href='#sessions-tab']")
+        self.wait.until(expected_conditions.visibility_of_element_located(
+            (By.ID, "sessions-tab")
+        ))
+
+    def filter_journey_sessions(self, value):
+        from selenium.webdriver.support.ui import Select
+        select_el = self.wait.until(expected_conditions.element_to_be_clickable(
+            (By.ID, "appointment-filter")
+        ))
+        Select(select_el).select_by_value(value)
+
+    def click_session_view_details(self, appointment_id):
+        tile = self.wait.until(expected_conditions.presence_of_element_located(
+            (By.XPATH, f"//span[normalize-space()='{appointment_id}']/ancestor::div[contains(@class,'item-appointment')]")
+        ))
+        link = tile.find_element(By.CSS_SELECTOR, ".stretched-link")
+        self.driver.execute_script("arguments[0].click()", link)
+        self.wait.until(expected_conditions.url_contains("/homeweb/appointment"))
+
+    def click_cancel_appointment_btn(self):
+        self.click_element(By.CSS_SELECTOR, ".appointment-actions button.btn-icon-spaced")
+        self.wait.until(expected_conditions.visibility_of_element_located(
+            (By.CSS_SELECTOR, ".confirmation-container")
+        ))
+
+    def click_yes_cancel_appointment(self):
+        self.click_element(By.CSS_SELECTOR, ".btn-outline-danger")
+        self.wait.until(expected_conditions.url_contains("/booking/cancel"))
+
+    def confirm_cancel_appointment(self):
+        self.click_element(By.CSS_SELECTOR, "button.btn-cancel:not(.cancel-confirm)")
+        self.wait.until(expected_conditions.url_contains("/homeweb/dashboard"))
 
     def test_live_chat(self, email):
         chat_btn_locator = "svelte-mffmc3"
@@ -1117,7 +1292,7 @@ class Homeweb(BasePage):
         self.click_element(By.CSS_SELECTOR, "button[type='submit']")
 
         # PROD only: handle optional Meet Now speedbump
-        if self.env != "beta":
+        if self.env not in ("beta", "staging"):
             self.wait.until(lambda d:
                             "homeweb/meetnow" in d.current_url.lower() or
                             "homeweb/booking" in d.current_url.lower()
@@ -1133,46 +1308,45 @@ class Homeweb(BasePage):
         # 1: Wait for Step 1 contact form
         self.wait.until(expected_conditions.visibility_of_element_located((By.ID, "form-contact-info")))
 
-        # 2: Add Address - Open modal, fill form, save
+        # 2: Address modal — opens in form mode (no existing address) or selection mode (existing address)
         self.click_element(By.XPATH, "//a[@data-bs-target='#modal-select-address']")
         self.wait.until(expected_conditions.visibility_of_element_located(
             (By.CSS_SELECTOR, "#modal-select-address .modal-content")
         ))
-        # 2.1: Address Type, Street Address, Postal Code
-        _Select(self.driver.find_element(By.ID, "addressType")).select_by_value(address_type)
-        self.driver.find_element(By.ID, "streetAddress").send_keys(street_address)
-        self.driver.find_element(By.ID, "postalCode").send_keys(postal_code)
 
-        # TODO: support explicit province/city params (default None = random)
-        # 2.2 Province: wait for modal loading to clear, then pick randomly
-        self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingOnboarding")))
-        self.wait.until(lambda d: len([o for o in d.find_elements(By.CSS_SELECTOR, "#jurisdiction option") if o.get_attribute("value")]) > 0)
-        province_select = _Select(self.wait.until(expected_conditions.element_to_be_clickable((By.ID, "jurisdiction"))))
-        province_options = [o.text for o in province_select.options if o.get_attribute("value")]
-        current_province = province_select.first_selected_option.text
-        current_cities = [o.text for o in self.driver.find_element(By.ID, "city").find_elements(By.TAG_NAME, "option")]
-        selected_province = random.choice(province_options)
-        province_select.select_by_visible_text(selected_province)
+        if self.driver.find_elements(By.ID, "addressType"):
+            # 2a: Form mode — fill in address details
+            _Select(self.driver.find_element(By.ID, "addressType")).select_by_value(address_type)
+            self.driver.find_element(By.ID, "streetAddress").send_keys(street_address)
+            self.driver.find_element(By.ID, "postalCode").send_keys(postal_code)
 
-        if selected_province != current_province:
-            def city_reloaded(driver):
-                try:
-                    return [o.text for o in driver.find_element(By.ID, "city").find_elements(By.TAG_NAME, "option")] != current_cities
-                except StaleElementReferenceException:
-                    return False
+            # TODO: support explicit province/city params (default None = random)
+            # Province: wait for modal loading to clear, then pick randomly
+            self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingOnboarding")))
+            self.wait.until(lambda d: len([o for o in d.find_elements(By.CSS_SELECTOR, "#jurisdiction option") if o.get_attribute("value")]) > 0)
+            province_select = _Select(self.wait.until(expected_conditions.element_to_be_clickable((By.ID, "jurisdiction"))))
+            province_options = [o.text for o in province_select.options if o.get_attribute("value")]
+            current_province = province_select.first_selected_option.text
+            current_cities = [o.text for o in self.driver.find_element(By.ID, "city").find_elements(By.TAG_NAME, "option")]
+            selected_province = random.choice(province_options)
+            province_select.select_by_visible_text(selected_province)
 
-            self.wait.until(city_reloaded)
+            if selected_province != current_province:
+                def city_reloaded(driver):
+                    try:
+                        return [o.text for o in driver.find_element(By.ID, "city").find_elements(By.TAG_NAME, "option")] != current_cities
+                    except StaleElementReferenceException:
+                        return False
+                self.wait.until(city_reloaded)
 
-        # 2.3 Province: pick city randomly once loaded after province selection
-        city_select = _Select(self.wait.until(expected_conditions.element_to_be_clickable((By.ID, "city"))))
-        city_options = [o.text for o in city_select.options if o.get_attribute("value")]
-        selected_city = random.choice(city_options)
-        city_select.select_by_visible_text(selected_city)
+            city_select = _Select(self.wait.until(expected_conditions.element_to_be_clickable((By.ID, "city"))))
+            city_options = [o.text for o in city_select.options if o.get_attribute("value")]
+            city_select.select_by_visible_text(random.choice(city_options))
 
-        # 2.4: Save address — button is enabled once required fields are filled
-        self.click_element(By.XPATH, "//div[@id='modal-select-address']//button[contains(normalize-space(), 'Add Address')]")
+            # Save — transitions to selection mode with "Select" button
+            self.click_element(By.XPATH, "//div[@id='modal-select-address']//button[contains(normalize-space(), 'Add Address')]")
 
-        # 2.5: Select Address - "Change Address" confirmation modal appears next — click Select to confirm
+        # 2b: Selection mode — existing address shown as radio; click Select to confirm
         self.click_element(By.XPATH, "//div[@id='modal-select-address']//button[normalize-space()='Select']")
         self.wait.until(expected_conditions.invisibility_of_element_located(
             (By.CSS_SELECTOR, "#modal-select-address .modal-content")
@@ -1243,7 +1417,7 @@ class Homeweb(BasePage):
     def select_booking_options(self):
         self.wait.until(expected_conditions.visibility_of_element_located((By.CLASS_NAME, "section-booking")))
 
-        if self.env == "beta":
+        if self.env in ("beta", "staging"):
             # 2: Cycle through date ranges until available times are found
             date_range_select = Select(self.wait.until(
                 expected_conditions.presence_of_element_located((By.ID, "dateRange"))
@@ -1298,7 +1472,7 @@ class Homeweb(BasePage):
             self.click_element(By.XPATH, "//button[contains(normalize-space(), 'Review') and not(contains(@class, 'disabled'))]")
 
     def confirm_booking(self):
-        if self.env == "beta":
+        if self.env in ("beta", "staging"):
             self.click_element(By.ID, "acknowledge-services")
             self.click_element(By.ID, "acknowledge-cancellation-policy")
             self.click_element(By.CSS_SELECTOR, "button[form='form-acknowledgement']:not(.disabled)")
@@ -1415,7 +1589,7 @@ class ProviderTile:
 
     @property
     def provider_details_link(self):
-        link = "a.provider-name" if self._env == "beta" else "a.link-provider-details"
+        link = "a.provider-name" if self._env in ("beta", "staging") else "a.link-provider-details"
         return self._tile.find_element(By.CSS_SELECTOR, link)
 
     @property
