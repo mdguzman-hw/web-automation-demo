@@ -523,77 +523,27 @@ class Homeweb(BasePage):
     def wait_for_provider_matching(self):
         self.wait.until(lambda d: "matching" in d.current_url.lower() or "cache" in d.current_url.lower())
         self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPriorityMatches")))
-        self.wait.until(lambda d:
-            d.find_elements(By.CLASS_NAME, "section-priority-results") or
-            d.find_elements(By.CLASS_NAME, "col-provider-list")
-        )
+        self.wait.until(expected_conditions.presence_of_element_located((By.CLASS_NAME, "section-priority-results")))
         return True
-
-    def _provider_has_times(self):
-        """On provider-detail page, cycle through all date ranges and return True if any slot is available."""
-        from selenium.webdriver.support.ui import Select as SeleniumSelect
-        date_selects = self.driver.find_elements(By.ID, "dateRange")
-        if not date_selects:
-            return bool(self.driver.find_elements(By.CSS_SELECTOR, ".provider-times-container label.btn-time"))
-        date_range_select = SeleniumSelect(date_selects[0])
-        for option in date_range_select.options:
-            date_range_select.select_by_value(option.get_attribute("value"))
-            self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
-            if self.driver.find_elements(By.CSS_SELECTOR, ".provider-times-container label.btn-time"):
-                return True
-        return False
 
     def select_first_available_provider(self):
         pick_different_text = "Choisissez une autre personne" if self.language == "fr" else "Pick a different person"
 
         self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
 
-        from selenium.common.exceptions import TimeoutException as SeleniumTimeoutException
-        from selenium.webdriver.support.ui import WebDriverWait
-
-        def _click_and_check(provider_el, link_selector):
-            """Click provider link, return True if we land on a bookable provider-detail page."""
-            matching_url = self.driver.current_url
-            link = provider_el.find_element(By.CSS_SELECTOR, link_selector)
-            self.driver.execute_script("arguments[0].click()", link)
-            try:
-                WebDriverWait(self.driver, 6).until(lambda d: "provider-detail" in d.current_url.lower())
-            except SeleniumTimeoutException:
-                # Provider didn't navigate — org/test provider, skip it
-                if self.driver.current_url != matching_url:
-                    self.driver.back()
-                    self.wait.until(lambda d: "matching" in d.current_url.lower() or "cache" in d.current_url.lower())
-                    self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
-                return False
+        providers = self.driver.find_elements(By.CSS_SELECTOR, ".section-priority-results .item-booking-option")
+        for provider in providers:
+            links = provider.find_elements(By.CSS_SELECTOR, "a.provider-content")
+            if not links:
+                continue
+            links[0].click()
             self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
-            if "noSchedule=true" in self.driver.current_url or not self._provider_has_times():
-                self.click_element(By.LINK_TEXT, pick_different_text)
-                self.wait.until(lambda d: "matching" in d.current_url.lower() or "cache" in d.current_url.lower())
-                self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
-                return False
-            return True
-
-        def _try_providers(css_container, link_selector, filter_selector=None):
-            index = 0
-            while True:
-                all_items = self.driver.find_elements(By.CSS_SELECTOR, f"{css_container} .item-booking-option")
-                providers = [p for p in all_items if p.find_elements(By.CSS_SELECTOR, link_selector)]
-                if filter_selector:
-                    providers = [p for p in providers if p.find_elements(By.CSS_SELECTOR, filter_selector)]
-                if index >= len(providers):
-                    return False
-                if _click_and_check(providers[index], link_selector):
-                    return True
-                index += 1
-
-        # 1. Try priority block — uses a.provider-content
-        if self.driver.find_elements(By.CSS_SELECTOR, ".section-priority-results .item-booking-option"):
-            if _try_providers(".section-priority-results", "a.provider-content"):
+            if "noSchedule=true" not in self.driver.current_url:
                 return
-
-        # 2. Fall through to provider list — uses a.provider-name, individual counsellors only (have accreditations)
-        if not _try_providers(".col-provider-list", "a.provider-name", filter_selector="p.accreditations"):
-            raise Exception("No schedulable provider found in priority block or provider list")
+            self.click_element(By.LINK_TEXT, pick_different_text)
+            self.wait.until(lambda d: "matching" in d.current_url.lower() or "cache" in d.current_url.lower())
+            self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingPage")))
+            providers = self.driver.find_elements(By.CSS_SELECTOR, ".section-priority-results .item-booking-option")
 
     def wait_for_booking_details(self):
         provider_detail_endpoint = "/provider-detail" if self.env in ("beta", "staging") else "/detail"
@@ -1302,7 +1252,7 @@ class Homeweb(BasePage):
 
     def complete_booking_contact_form(self, email, phone,
                                       address_type, street_address,
-                                      postal_code, message_permission, comments=""):
+                                      postal_code, message_permission, province, city, comments=""):
         from selenium.webdriver.support.ui import Select as _Select
 
         # 1: Wait for Step 1 contact form
@@ -1314,39 +1264,44 @@ class Homeweb(BasePage):
             (By.CSS_SELECTOR, "#modal-select-address .modal-content")
         ))
 
-        if self.driver.find_elements(By.ID, "addressType"):
-            # 2a: Form mode — fill in address details
+        def _fill_address_form():
             _Select(self.driver.find_element(By.ID, "addressType")).select_by_value(address_type)
             self.driver.find_element(By.ID, "streetAddress").send_keys(street_address)
             self.driver.find_element(By.ID, "postalCode").send_keys(postal_code)
-
-            # TODO: support explicit province/city params (default None = random)
-            # Province: wait for modal loading to clear, then pick randomly
             self.wait.until(expected_conditions.invisibility_of_element_located((By.CLASS_NAME, "loadingOnboarding")))
             self.wait.until(lambda d: len([o for o in d.find_elements(By.CSS_SELECTOR, "#jurisdiction option") if o.get_attribute("value")]) > 0)
             province_select = _Select(self.wait.until(expected_conditions.element_to_be_clickable((By.ID, "jurisdiction"))))
-            province_options = [o.text for o in province_select.options if o.get_attribute("value")]
-            current_province = province_select.first_selected_option.text
             current_cities = [o.text for o in self.driver.find_element(By.ID, "city").find_elements(By.TAG_NAME, "option")]
-            selected_province = random.choice(province_options)
-            province_select.select_by_visible_text(selected_province)
+            province_select.select_by_visible_text(province)
 
-            if selected_province != current_province:
-                def city_reloaded(driver):
-                    try:
-                        return [o.text for o in driver.find_element(By.ID, "city").find_elements(By.TAG_NAME, "option")] != current_cities
-                    except StaleElementReferenceException:
-                        return False
-                self.wait.until(city_reloaded)
+            def city_reloaded(driver):
+                try:
+                    return [o.text for o in driver.find_element(By.ID, "city").find_elements(By.TAG_NAME, "option")] != current_cities
+                except StaleElementReferenceException:
+                    return False
+            self.wait.until(city_reloaded)
 
             city_select = _Select(self.wait.until(expected_conditions.element_to_be_clickable((By.ID, "city"))))
-            city_options = [o.text for o in city_select.options if o.get_attribute("value")]
-            city_select.select_by_visible_text(random.choice(city_options))
-
-            # Save — transitions to selection mode with "Select" button
+            city_select.select_by_visible_text(city)
             self.click_element(By.XPATH, "//div[@id='modal-select-address']//button[contains(normalize-space(), 'Add Address')]")
 
-        # 2b: Selection mode — existing address shown as radio; click Select to confirm
+        if self.driver.find_elements(By.ID, "addressType"):
+            # 2a: Form mode — no existing addresses; fill and save
+            _fill_address_form()
+        else:
+            # 2b: Selection mode — check if an address with the target province already exists
+            existing = self.driver.find_elements(
+                By.XPATH, f"//div[@id='modal-select-address']//label[contains(normalize-space(), '{province}')]"
+            )
+            if existing:
+                existing[0].click()
+            else:
+                # No matching address — add a new one
+                self.click_element(By.XPATH, "//div[@id='modal-select-address']//button[contains(normalize-space(), 'Add')]")
+                self.wait.until(expected_conditions.presence_of_element_located((By.ID, "addressType")))
+                _fill_address_form()
+
+        # 2c: Confirm selection
         self.click_element(By.XPATH, "//div[@id='modal-select-address']//button[normalize-space()='Select']")
         self.wait.until(expected_conditions.invisibility_of_element_located(
             (By.CSS_SELECTOR, "#modal-select-address .modal-content")

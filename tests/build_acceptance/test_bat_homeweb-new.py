@@ -32,8 +32,8 @@ from selenium.webdriver.common.by import By
 # TODO-P2 Discover - Wellness
 # TODO-P2 Discover - Work-Life
 
-# TODO-P3 Journey - Plans
-# TODO-P3 Journey - Sessions
+# DONE | Journey - Plans
+# DONE | Journey - Sessions
 # TODO-P3 Journey - Appointments
 
 # DONE | Smart Care Navigation
@@ -550,7 +550,7 @@ def test_bat_web_022(homeweb, record_output):
 # # BAT-WEB-023 | End Service [DSGDEMO-S3]
 # def test_bat_web_023(homeweb, credentials, record_output, update_account_dashboard):
 #     # 1: Test - Sign In - Header
-#     assert homeweb.is_landing()
+#     homeweb.navigate_landing()
 #     homeweb.navigate_sign_in()
 #
 #     # 2: Test - Login - Homeweb - DSGDEMO
@@ -629,6 +629,8 @@ def test_bat_web_022(homeweb, record_output):
 #         street_address="1234567 Homewood Ave",
 #         postal_code="T2X 6V7",
 #         message_permission="1",
+#         province="Ontario",
+#         city="Guelph",
 #     )
 #     assert homeweb.wait_for_provider_matching()
 #     homeweb.select_first_available_provider()
@@ -644,9 +646,9 @@ def test_bat_web_022(homeweb, record_output):
 #         f"EXPECTED: Dashboard S3 after re-booking | ACTUAL: {dashboard_state}"
 #     update_account_dashboard("S3")
 #     record_output(f"Re-booking complete — Dashboard: {dashboard_state}")
-#
 
-# BAT-WEB-024 | Cancel Appointment [DSGDEMO-S3]
+
+# # BAT-WEB-024 | Cancel Appointment [DSGDEMO-S3]
 # def test_bat_web_024(homeweb, credentials, record_output, update_account_dashboard):
 #     homeweb.navigate_dashboard()
 #
@@ -712,22 +714,22 @@ def test_bat_web_022(homeweb, record_output):
 #     update_account_dashboard("S3")
 #     record_output(f"Re-booking complete — Dashboard: {dashboard_state}")
 
-# BAT-WEB-025 | Update Profile [DSGDEMO-S3]
-def test_bat_web_025(homeweb, record_output):
-    pytest.skip("WIP->Update Profile")
-
-
-# BAT-WEB-026 | Discover [DSGDEMO-S3]
-def test_bat_web_026(homeweb, record_output):
-    pytest.skip("WIP->Discover")
-
-
-# BAT-WEB-027 | Journey [DSGDEMO-S3]
-def test_bat_web_027(homeweb, record_output):
-    pytest.skip("WIP->Journey")
-
-
-BAT-WEB-026 | Navigate to Messages
+# # BAT-WEB-025 | Update Profile [DSGDEMO-S3]
+# def test_bat_web_025(homeweb, record_output):
+#     pytest.skip("WIP->Update Profile")
+#
+#
+# # BAT-WEB-026 | Discover [DSGDEMO-S3]
+# def test_bat_web_026(homeweb, record_output):
+#     pytest.skip("WIP->Discover")
+#
+#
+# # BAT-WEB-027 | Journey [DSGDEMO-S3]
+# def test_bat_web_027(homeweb, record_output):
+#     pytest.skip("WIP->Journey")
+#
+#
+# BAT-WEB-026 | Navigate to Messages
 def test_bat_web_028(homeweb):
     assert homeweb.is_authenticated()
 
