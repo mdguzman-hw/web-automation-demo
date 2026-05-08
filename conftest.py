@@ -511,6 +511,9 @@ def env(request):
 load_dotenv()
 
 
+# TODO: credentials should be env-specific — prod/beta share the same DB (same accounts ok),
+#       staging has a separate DB (needs dedicated accounts), local requires special provisioning.
+#       Currently all envs use the same credentials which will break cross-env runs.
 @pytest.fixture(scope="session")
 def credentials():
     return {

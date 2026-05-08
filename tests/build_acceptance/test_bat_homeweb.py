@@ -85,13 +85,12 @@ def test_bat_web_005(homeweb):
 
     # 3: Test - Sentio transfer kickout
     homeweb.click_element(By.CLASS_NAME, "btn-primary")
+    homeweb.handle_transfer_consent()
     assert homeweb.wait_for_sentio_transfer()
     homeweb.go_back()
 
 
-# BAT-WEB-006 | Complete Pathfinder Assessment - Scenario 4
-# Employee at Homewood Health Inc (HHI Employee Program)
-# Resource ONLY
+# BAT-WEB-006 | Pathfinder - Scenario 1: Resource ONLY [HHI]
 def test_bat_web_006(homeweb, record_output):
     assert homeweb.is_authenticated()
     homeweb.navigate_dashboard()
@@ -178,6 +177,7 @@ def test_bat_web_009(homeweb, env):
     assert childcare_endpoint in homeweb.current_url.lower()
     assert homeweb.wait_for_resource_content()
     homeweb.click_element(By.CLASS_NAME, "btn-primary")
+    homeweb.handle_transfer_consent()
     assert homeweb.wait_for_lifestage_transfer()
 
     homeweb.navigate_landing()
@@ -192,6 +192,7 @@ def test_bat_web_009(homeweb, env):
     assert eldercare_endpoint in homeweb.current_url.lower()
     assert homeweb.wait_for_resource_content()
     homeweb.click_element(By.CLASS_NAME, "btn-primary")
+    homeweb.handle_transfer_consent()
     assert homeweb.wait_for_lifestage_transfer()
 
     homeweb.navigate_landing()
@@ -206,6 +207,7 @@ def test_bat_web_009(homeweb, env):
     assert hra_endpoint in homeweb.current_url.lower()
     assert homeweb.wait_for_resource_content()
     homeweb.click_element(By.CLASS_NAME, "btn-primary")
+    homeweb.handle_transfer_consent()
     assert homeweb.wait_for_lifestyle_transfer()
     homeweb.navigate_landing()
     assert homeweb.domain in homeweb.current_url.lower()
@@ -314,9 +316,7 @@ def test_bat_web_012(homeweb, quantum, credentials, env):
     homeweb.test_live_chat(email)
 
 
-# BAT-WEB-013 | Complete Pathfinder Assessment - Scenario 1
-# Mental Health > Anxiety > High Severity > Low Risk
-# Professional Support & Sentio iCBT
+# BAT-WEB-013 | Pathfinder - Scenario 2: Professional Support & Sentio [DSGDEMO]
 def test_bat_web_013(homeweb, credentials, record_output):
     assert homeweb.is_landing()
     header_anon = homeweb.header
@@ -342,7 +342,7 @@ def test_bat_web_013(homeweb, credentials, record_output):
         remaining = homeweb.get_active_services()
         assert not any(a.topic == topic for a in remaining)
 
-    pytest.skip("Skipping Scenario 1. Manually testing flow")
+    pytest.skip("Skipping Scenario 2. Manually testing flow")
     # TODO: Investigate if this is expected
     # 4: Test - Retrieve Dashboard Tiles
     expected = 6 if homeweb.language == "fr" else 8
@@ -364,13 +364,9 @@ def test_bat_web_013(homeweb, credentials, record_output):
     homeweb.assert_recommendation_scenario_2()
 
 
-# BAT-WEB-014 | Complete Pathfinder Assessment - Scenario 2
-# Mental Health > Anxiety > Low Severity > Low Risk
-# Sentio iCBT ONLY
-# Same flow as BAT-WEB-012, except for this scenario, need to have started a booking already
-# Appointment tile should be visible in Dashboard for the topic (Mental Health > Anxiety)
+# BAT-WEB-014 | Pathfinder - Scenario 4: Sentio ONLY [DSGDEMO]
 def test_bat_web_014(homeweb, credentials, record_output):
-    pytest.skip("Skipping Scenario 2. Manually testing flow")
+    pytest.skip("Skipping Scenario 4. Manually testing flow")
     assert homeweb.is_authenticated()
     homeweb.navigate_dashboard()
 
@@ -393,9 +389,7 @@ def test_bat_web_014(homeweb, credentials, record_output):
     homeweb.assert_recommendation_scenario_4()
 
 
-# BAT-WEB-015 | Complete Pathfinder Assessment - Scenario 3
-# Work & career > Anger > Low Severity > Low Risk
-# Professional Support ONLY
+# BAT-WEB-015 | Pathfinder - Scenario 3: Professional Support ONLY [DSGDEMO]
 def test_bat_web_015(homeweb, credentials, record_output):
     assert homeweb.is_authenticated()
     homeweb.navigate_dashboard()
@@ -438,7 +432,7 @@ def test_bat_web_016(homeweb, credentials, env):
         assert homeweb.wait_for_rating()
         homeweb.complete_rating(5)
         assert homeweb.wait_for_booking_create()
-        homeweb.complete_booking_create_form()
+        homeweb.complete_booking_create_form(province="Ontario", city="Guelph")
         assert homeweb.wait_for_service_confirm()
 
     homeweb.complete_service_confirm_form(email)
@@ -468,9 +462,7 @@ def test_bat_web_017(homeweb, credentials):
 
     homeweb.confirm_booking()
 
-# BAT-WEB-018 | Complete Pathfinder Assessment - Scenario 5
-# Legal flow
-# Financial Flow
+# BAT-WEB-018 | Pathfinder - Scenario 5: Legal Flow & Scenario 6: Financial Flow [DSGDEMO]
 def test_bat_web_018(homeweb, credentials, record_output):
     assert homeweb.is_authenticated()
     homeweb.navigate_dashboard()

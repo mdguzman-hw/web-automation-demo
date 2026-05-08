@@ -1157,7 +1157,7 @@ class Homeweb(BasePage):
         self.wait.until(expected_conditions.element_to_be_clickable(selected))
         selected.click()
 
-    def complete_booking_create_form(self):
+    def complete_booking_create_form(self, province=None, city=None):
         # 1: Wait for form to load
         self.wait.until(
             expected_conditions.visibility_of_element_located(
@@ -1175,27 +1175,22 @@ class Homeweb(BasePage):
         province_options = [o.text for o in province_select.options if o.get_attribute("value")]
         current_province = province_select.first_selected_option.text
         current_cities = [o.text for o in self.driver.find_element(By.ID, "city").find_elements(By.TAG_NAME, "option")]
-        selected_province = random.choice(province_options)
+        selected_province = province if province else random.choice(province_options)
         province_select.select_by_visible_text(selected_province)
         print(selected_province)
 
         # 4: City (wait for reload only if province changed)
         if selected_province != current_province:
-            # TODO: Replace StaleElementReferenceException with JS atomic read once backwards compatibility is confirmed
             def city_reloaded(driver):
                 try:
                     return [o.text for o in driver.find_element(By.ID, "city").find_elements(By.TAG_NAME, "option")] != current_cities
                 except StaleElementReferenceException:
                     return False
-
             self.wait.until(city_reloaded)
-
-        # if selected_province != current_province:
-        #     self.wait.until(lambda d: [o.text for o in d.find_element(By.ID, "city").find_elements(By.TAG_NAME, "option")] != current_cities)
 
         city_select = Select(self.wait.until(expected_conditions.element_to_be_clickable((By.ID, "city"))))
         city_options = [o.text for o in city_select.options if o.get_attribute("value")]
-        selected_city = random.choice(city_options)
+        selected_city = city if city else random.choice(city_options)
         city_select.select_by_visible_text(selected_city)
         print(selected_city)
 
