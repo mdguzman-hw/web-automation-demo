@@ -6,9 +6,9 @@
 
 | | |
 |---|---|
-| **Previous** | 9.0 / 10 |
-| **Current** | 9.1 / 10 |
-| **Last reviewed** | 2026-05-05 |
+| **Previous** | 9.1 / 10 |
+| **Current** | 9.2 / 10 |
+| **Last reviewed** | 2026-05-11 |
 
 ---
 
@@ -84,6 +84,17 @@
 | 66 | `wait_for_booking_digest` removed from new portal test 006 — new portal goes directly to matching/cache after contact form submit; old digest page does not appear | Wrong function in flow | **Fixed** |
 | 67 | `test_bat_homeweb-new.py` expanded from 6 to 26 active tests — all commented stubs (007–024) uncommented and reviewed; 023/024 Cancel Appointment and End Service added as `pytest.skip` stubs; 025/026 Messages and Embedded renumbered; `xxx_*` suffix convention adopted for undecided trailing stubs | 6 active tests | **Implemented** |
 | 68 | `update_account_dashboard` writes to correct row by matching `_run_timestamp` — only touches Dashboard column; safe against concurrent rows from previous runs | N/A | **New** |
+| 69 | `_click_get_started` — FR/env-aware: old portal uses "Alors commençons", new portal (beta/staging) uses "Commencer Maintenant"; EN always uses "Get started" | FR timed out on old portal | **Fixed** |
+| 70 | `select_booking_options` — Review button XPath extended with `or contains(normalize-space(), 'Vérifiez')` for FR support | FR "Vérifiez et confirmez" timed out | **Fixed** |
+| 71 | Modality dropdown in `select_booking_options` — `element_to_be_clickable` replaced with lambda wait for actual `option[value]` to populate; `select_by_value` used for locale safety | Button enabled before options loaded; FR `select_by_visible_text` mismatch | **Fixed** |
+| 72 | `complete_booking_contact_form` — `province` and `city` required params; checks for existing province address in selection mode before opening add-new form; `select_by_value` for province locale safety | Province/city hardcoded to random; no existing-address check | **Improved** |
+| 73 | `complete_booking_create_form` — optional `province`/`city` params; random selection kept as fallback when `None`; `select_by_value` for city | Random-only, no override possible | **Improved** |
+| 74 | `get_dashboard_tiles` — tile count assertion moved inside method with `KNOWN ISSUE 2 (QCLIENT-768)` message; 10 redundant inline `assert len(tiles) == expected` blocks removed from `test_bat_homeweb.py` | Repeated across 10 call sites | **Refactored** |
+| 75 | `handle_transfer_consent()` called after every kickout `btn-primary` click in `test_bat_homeweb.py` tests 005 and 009 (4 total insertions) — matches new portal behaviour | Missing; consent page caused timeout | **Fixed** |
+| 76 | KNOWN ISSUE 1–4 labels standardized project-wide; `KNOWN ISSUE 2` pinned to `get_dashboard_tiles` assert with QCLIENT-768 ticket; `KNOWN ISSUE 3` on beta kickout skip; `KNOWN ISSUE 4` on HRA skip | Inconsistent labels across files | **Standardized** |
+| 77 | `select_first_available_provider` reverted to priority-block only — all fallback/filtering logic (`_provider_has_times`, URL-change check, `col-provider-list` iteration) removed; `wait_for_provider_matching` waits only for `section-priority-results` | Complex fallback obscured root cause | **Reverted** |
+| 78 | Scenario descriptions in `test_bat_homeweb.py` standardized to "Pathfinder - Scenario N" format matching new portal naming | Old 1–4 SCN numbering inconsistent | **Fixed** |
+| 79 | STAGING environment added throughout: `env` fixture params, `pytest_collection_modifyitems` ordering, docs (CONFIG.md), terminal summary | PROD/BETA/LOCAL only | **New** |
 
 ---
 
@@ -104,7 +115,7 @@
 | 11 | **`registered-accounts.xlsx` Dashboard column only writes S3** | Low | Column writes `"S3"` after full E2E booking. S2 (post-onboarding, pre-booking) is never written — empty rows can be assumed S1, but S2 accounts that didn't complete booking are indistinguishable from S1. |
 | 12 | **`test_bat_web_003` email verification requires manual input** | Medium | Step 5 uses `input()` to pause for manual code entry. TODO: wire in via IMAP/email API to make fully automated. |
 | 13 | **`test_bat_web_003` password is hardcoded** | Low | `password = "QuantumSentio123$"` is inline in the test rather than sourced from `.env`. |
-| 14 | **`col-provider-list` provider selector unconfirmed** | Low | `select_first_available_provider` fallback uses `.col-provider-list .item-booking-option` — selector assumed from priority results pattern. Needs verification against actual DOM when no priority matches are present. |
+| 14 | **Provider fallback not implemented** | Medium | `select_first_available_provider` handles priority block only (`section-priority-results`). If no priority providers are returned, test will timeout. Fallback to `col-provider-list` removed pending root-cause diagnosis. |
 | 15 | **`StaleElementReferenceException` still used in city dropdown** | Low | City reload check in `Homeweb.py` still uses try/except on stale element. TODO to replace with JS atomic read once backwards compatibility confirmed. |
 | 16 | **TODO: Investigate PROD booking selectors against new portal UI** | Medium | `btn-primary` button selector fixed; time slot and modality selectors in `select_booking_options` PROD branch may also diverge as new portal rolls out to PROD. |
 | 17 | **`logger` null-check pattern in `Homeweb.py`** | Low | `complete_onboarding` and `complete_assessment` use `if logger: logger(...)` guards (7 occurrences) and an inconsistent `(logger or print)(...)` in `complete_assessment`. Could be cleaned up by defaulting `logger=lambda *_: None` and calling `logger(...)` directly. |

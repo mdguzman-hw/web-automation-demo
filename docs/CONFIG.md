@@ -20,7 +20,7 @@ This configuration enables:
 
 ### Purpose
 
-Adds a custom command-line argument to control which environment(s) to run.
+Adds custom command-line arguments to control which environment(s) to run and whether to run headed.
 
 ---
 
@@ -32,7 +32,13 @@ def pytest_addoption(parser):
         "--env",
         action="store",
         default="all",
-        help="Environment: prod | beta | all"
+        help="Environment: prod | beta | staging | local | all"
+    )
+    parser.addoption(
+        "--headed",
+        action="store_true",
+        default=False,
+        help="Run Chrome in headed (visible) mode instead of headless"
     )
 ```
 
@@ -43,18 +49,41 @@ def pytest_addoption(parser):
 ```bash
 pytest --env=prod
 pytest --env=beta
+pytest --env=staging
+pytest --env=local
 pytest --env=all
+pytest --env=prod --headed
 ```
 
 ---
 
 ### Behavior
 
-| Command        | Result                    |
-|----------------|---------------------------|
-| `--env=prod`  | Run only PROD tests       |
-| `--env=beta`  | Run only BETA tests       |
-| `--env=all`   | Run both PROD and BETA    |
+| Command          | Result                              |
+|------------------|-------------------------------------|
+| `--env=prod`    | Run only PROD tests                 |
+| `--env=beta`    | Run only BETA tests                 |
+| `--env=staging` | Run only STAGING tests              |
+| `--env=local`   | Run only LOCAL tests                |
+| `--env=all`     | Run all environments                |
+| `--headed`      | Launch Chrome in visible window     |
+
+---
+
+### Language
+
+Language is controlled via the `LANGUAGE` environment variable (defaults to `en`):
+
+```bash
+# English (default)
+pytest tests/build_acceptance/test_bat_homeweb.py --env=prod
+
+# French
+LANGUAGE=fr pytest tests/build_acceptance/test_bat_homeweb.py --env=prod
+
+# Both EN and FR in one command (FR runs regardless of EN result)
+pytest tests/build_acceptance/test_bat_homeweb.py --env=prod ; LANGUAGE=fr pytest tests/build_acceptance/test_bat_homeweb.py --env=prod
+```
 
 ---
 
@@ -79,28 +108,22 @@ Runs the same test suite across multiple environments without duplicating test f
 ```python
 import pytest
 
-@pytest.fixture(params=["prod", "beta"], ids=["PROD", "BETA"], scope="session")
-def homeweb(request, driver, language):
+@pytest.fixture(params=["prod", "beta", "staging", "local"], ids=["PROD", "BETA", "STAGING", "LOCAL"], scope="session")
+def env(request):
     env_flag = request.config.getoption("--env")
 
     if env_flag != "all" and request.param != env_flag:
         pytest.skip(f"Skipping {request.param} environment")
 
-    if request.param == "prod":
-        instance = Homeweb(driver, language)
-    else:
-        instance = HomewebBeta(driver, language)
-
-    instance.env = request.param
-    return instance
+    return request.param
 ```
 
 ---
 
 ### Key Concepts
 
-- `params=["prod", "beta"]` → runs each test for both environments
-- `ids=["PROD", "BETA"]` → controls output labels
+- `params=["prod", "beta", "staging", "local"]` → runs each test for all environments
+- `ids=["PROD", "BETA", "STAGING", "LOCAL"]` → controls output labels
 - `request.param` → current environment value
 - `pytest.skip(...)` → skips unwanted environments based on CLI
 - `instance.env` → attaches environment metadata to the object
@@ -146,7 +169,7 @@ def pytest_collection_modifyitems(items):
 
 Tests are sorted by:
 
-1. Environment (PROD → BETA → other)
+1. Environment (PROD → BETA → STAGING → LOCAL → other)
 2. Test number (001 → 002 → ...)
 
 ---
@@ -262,16 +285,9 @@ tests execute in controlled order
 
 ## TLDR
 
-- `pytest_addoption` → CLI control
-- parametrized fixture → multi-environment testing
-- `pytest_collection_modifyitems` → execution ordering
-- remove duplicated test files
-
----
-
-## Recommended Next Steps
-
-- remove `_beta` duplicate tests
-- apply pattern across all suites
-- consider stateless tests for parallel execution
+- `pytest_addoption` → CLI control (`--env`, `--headed`)
+- parametrized `env` fixture → multi-environment testing across PROD/BETA/STAGING/LOCAL
+- `pytest_collection_modifyitems` → execution ordering (PROD first, LOCAL last)
+- `LANGUAGE=fr` env var → bilingual test execution (EN default)
+- Single test file per suite — no duplication
 

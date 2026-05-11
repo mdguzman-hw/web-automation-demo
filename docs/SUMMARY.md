@@ -288,11 +288,20 @@ All credentials are loaded from `.env` via `python-dotenv`. The following accoun
 
 ## Known Issues & Notes
 
-- **KNOWN ISSUE 1**: Logout always redirects to the EN landing page, regardless of session language. Workaround: manually call `navigate_landing()` after logout.
-- **BETA**: Customer Portal, Kickouts (BAT-009), and the 5-star rating page are skipped in beta.
+All known issues are labeled `KNOWN ISSUE N` in code — search the project for `KNOWN ISSUE` to find all occurrences.
+
+| # | Label | Ticket | Description |
+|---|-------|--------|-------------|
+| 1 | KNOWN ISSUE 1 | — | Logout always redirects to the EN landing page regardless of session language. Workaround: manually call `navigate_landing()` after logout. Found in `test_bat_homeweb.py` and `test_smoke_homeweb.py`. |
+| 2 | KNOWN ISSUE 2 | QCLIENT-768 | FR dashboard shows 6 tiles, EN shows 8 — Childcare and Eldercare LifestageCare tiles are absent in French. Assert lives in `Homeweb.get_dashboard_tiles()`. |
+| 3 | KNOWN ISSUE 3 | — | Kickout tests (BAT-WEB-009) skipped in beta environment — not available. |
+| 4 | KNOWN ISSUE 4 | — | HRA (lifestyle transfer) kickout not functional. Test skipped in `test_bat_homeweb-new.py`. |
+
+**Other notes:**
+- **BETA**: Customer Portal and the 5-star rating page are skipped in beta.
 - **PROD**: Sentio Client and Sentio Provider fixtures are skipped in prod.
-- There is a duplicate `wait_for_resources` definition in `suites/Homeweb.py` (lines 77 and 87) — the second definition silently overrides the first.
 - `test_bat_web_013` has a hardcoded `pytest.skip()` mid-test after clearing services — the assessment flow after that point is not currently exercised automatically.
+- **TODO**: Credentials are not env-specific — prod/beta share the same DB (same accounts ok), staging has a separate DB (needs dedicated accounts), local requires special provisioning. See `conftest.py:credentials`.
 
 ---
 
@@ -311,10 +320,16 @@ pytest tests/smoke/test_smoke_homeweb.py --env=prod
 # Run new portal BAT against BETA only
 pytest tests/build_acceptance/test_bat_homeweb-new.py --env=beta
 
-# Run with custom language
-LANGUAGE=fr pytest tests/build_acceptance/test_bat_homeweb.py --env=prod
+# Run against staging
+pytest tests/build_acceptance/test_bat_homeweb.py --env=staging
+
+# Run in headed (visible) mode
+pytest tests/build_acceptance/test_bat_homeweb.py --env=prod --headed
+
+# Run EN then FR (FR runs regardless of EN result)
+pytest tests/build_acceptance/test_bat_homeweb.py --env=prod ; LANGUAGE=fr pytest tests/build_acceptance/test_bat_homeweb.py --env=prod
 ```
 
 ---
 
-*Last updated: 2026-05-05 (complete_onboarding hardened: loadingOnboarding waits, bilingual Next/Suivant, keyboard-driven PulseCheck, 6-question assessment with flow/index params)*
+*Last updated: 2026-05-11 (FR booking fixes: _click_get_started env-aware, select_booking_options Vérifiez support, modality select_by_value; complete_booking_contact_form province/city params + existing-address check; get_dashboard_tiles KNOWN ISSUE 2 QCLIENT-768 consolidated; handle_transfer_consent added to test_bat_homeweb.py; KNOWN ISSUE 1–4 standardized; select_first_available_provider reverted to priority-block only; STAGING env added)*
