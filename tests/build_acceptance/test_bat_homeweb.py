@@ -72,10 +72,7 @@ def test_bat_web_005(homeweb):
     homeweb.navigate_dashboard()
 
     # 1: Test - Retrieve Dashboard Tiles
-    # TODO: Investigate if this is expected
-    expected = 6 if homeweb.language == "fr" else 8
     dashboard_tiles = homeweb.get_dashboard_tiles()
-    assert len(dashboard_tiles) == expected
 
     # 2: Test - Navigate Sentio Resource
     sentio_endpoint = "/resources/62c5a1e929ed9c1608d0434b"
@@ -96,9 +93,7 @@ def test_bat_web_006(homeweb, record_output):
     homeweb.navigate_dashboard()
 
     # 4: Test - Retrieve Dashboard Tiles
-    expected = 6 if homeweb.language == "fr" else 8
     dashboard_tiles = homeweb.get_dashboard_tiles()
-    assert len(dashboard_tiles) == expected
 
     # 5: Test - Navigate Assessment
     homeweb.click_element(By.LINK_TEXT, dashboard_tiles[0].link_text)
@@ -156,7 +151,7 @@ def test_bat_web_008(homeweb, credentials, env):
 # BAT-WEB-009 | Kickouts
 def test_bat_web_009(homeweb, env):
     if env == "beta":
-        return pytest.skip(f"Skipping {env}. KNOWN ISSUE")
+        return pytest.skip(f"KNOWN ISSUE 3 — Kickouts not available in {env}")
 
     childcare_endpoint = "/resources/579ba4db88db7af01fe6ddd4"
     eldercare_endpoint = "/resources/579ba49a88db7af01fe6ddc8"
@@ -166,10 +161,7 @@ def test_bat_web_009(homeweb, env):
     homeweb.navigate_dashboard()
 
     # 1: Test - Retrieve Dashboard Tiles
-    # TODO: Investigate if this is expected
-    expected = 6 if homeweb.language == "fr" else 8
     dashboard_tiles = homeweb.get_dashboard_tiles()
-    assert len(dashboard_tiles) == expected
 
     # 2: Test: Childcare Resource Locator
     childcare_tile = dashboard_tiles[4]
@@ -184,7 +176,6 @@ def test_bat_web_009(homeweb, env):
     assert homeweb.domain in homeweb.current_url.lower()
     homeweb.navigate_dashboard()
     dashboard_tiles = homeweb.get_dashboard_tiles()
-    assert len(dashboard_tiles) == expected
 
     # 3: Test: Eldercare Resource Locator
     eldercare_tile = dashboard_tiles[5]
@@ -199,7 +190,6 @@ def test_bat_web_009(homeweb, env):
     assert homeweb.domain in homeweb.current_url.lower()
     homeweb.navigate_dashboard()
     dashboard_tiles = homeweb.get_dashboard_tiles()
-    assert len(dashboard_tiles) == expected
 
     # 4: Test: Health Risk Assessment
     hra_tile = dashboard_tiles[7]
@@ -343,11 +333,8 @@ def test_bat_web_013(homeweb, credentials, record_output):
         assert not any(a.topic == topic for a in remaining)
 
     pytest.skip("Skipping Scenario 2. Manually testing flow")
-    # TODO: Investigate if this is expected
     # 4: Test - Retrieve Dashboard Tiles
-    expected = 6 if homeweb.language == "fr" else 8
     dashboard_tiles = homeweb.get_dashboard_tiles()
-    assert len(dashboard_tiles) == expected
 
     # 5: Test - Navigate Assessment
     homeweb.click_element(By.LINK_TEXT, dashboard_tiles[0].link_text)
@@ -371,9 +358,7 @@ def test_bat_web_014(homeweb, credentials, record_output):
     homeweb.navigate_dashboard()
 
     # 4: Test - Retrieve Dashboard Tiles
-    expected = 6 if homeweb.language == "fr" else 8
     dashboard_tiles = homeweb.get_dashboard_tiles()
-    assert len(dashboard_tiles) == expected
 
     # 5: Test - Navigate Assessment
     homeweb.click_element(By.LINK_TEXT, dashboard_tiles[0].link_text)
@@ -395,9 +380,7 @@ def test_bat_web_015(homeweb, credentials, record_output):
     homeweb.navigate_dashboard()
 
     # 4: Test - Retrieve Dashboard Tiles
-    expected = 6 if homeweb.language == "fr" else 8
     dashboard_tiles = homeweb.get_dashboard_tiles()
-    assert len(dashboard_tiles) == expected
 
     # 5: Test - Navigate Assessment
     homeweb.click_element(By.LINK_TEXT, dashboard_tiles[0].link_text)
@@ -468,9 +451,7 @@ def test_bat_web_018(homeweb, credentials, record_output):
     homeweb.navigate_dashboard()
 
     # 4: Test - Retrieve Dashboard Tiles
-    expected = 6 if homeweb.language == "fr" else 8
     dashboard_tiles = homeweb.get_dashboard_tiles()
-    assert len(dashboard_tiles) == expected
 
     # 5: Test - Navigate Assessment
     homeweb.click_element(By.LINK_TEXT, dashboard_tiles[0].link_text)
@@ -487,9 +468,7 @@ def test_bat_web_018(homeweb, credentials, record_output):
     homeweb.navigate_dashboard()
 
     # 4: Test - Retrieve Dashboard Tiles
-    expected = 6 if homeweb.language == "fr" else 8
     dashboard_tiles = homeweb.get_dashboard_tiles()
-    assert len(dashboard_tiles) == expected
 
     # 5: Test - Navigate Assessment
     homeweb.click_element(By.LINK_TEXT, dashboard_tiles[0].link_text)

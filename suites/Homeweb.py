@@ -167,7 +167,10 @@ class Homeweb(BasePage):
         self._click_get_started()
 
     def _click_get_started(self):
-        link_text = "Commencer Maintenant" if self.language == "fr" else "Get started"
+        if self.language == "fr":
+            link_text = "Commencer Maintenant" if self.env in ("beta", "staging") else "Alors commençons"
+        else:
+            link_text = "Get started"
         self.click_element(By.LINK_TEXT, link_text)
 
     def go_back(self):
@@ -672,8 +675,9 @@ class Homeweb(BasePage):
         return [AppointmentTile(tile) for tile in appointment_tiles]
 
     def get_dashboard_tiles(self):
-        # TODO: Investigate if this is expected
-        zone_length = "6" if self.language == "fr" else "8"
+        # KNOWN ISSUE 2 (QCLIENT-768) — FR dashboard shows 6 tiles, EN shows 8 (Childcare & Eldercare LifestageCare tiles absent in FR)
+        expected = 6 if self.language == "fr" else 8
+        zone_length = str(expected)
         selector = f"div.collection.collection-dashboard.zone-length-{zone_length} .item"
         tile_elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
         tiles = []
@@ -683,6 +687,8 @@ class Homeweb(BasePage):
             href = tile.find_element(By.CSS_SELECTOR, ".item-content a.item-link").get_attribute("href")
             link_text = tile.find_element(By.CSS_SELECTOR, ".item-content a.item-link").text.strip()
             tiles.append(DashboardTile(self.driver, self.wait, tile, title, href, link_text))
+
+        assert len(tiles) == expected, f"KNOWN ISSUE 2 (QCLIENT-768) | Expected {expected} dashboard tiles, got {len(tiles)}"
         return tiles
 
     def get_primary_categories(self):
@@ -1395,8 +1401,8 @@ class Homeweb(BasePage):
                 print(selected_modality.text.strip())
                 modality_select.select_by_visible_text(selected_modality.text.strip())
 
-            # 4: Click Review & confirm
-            self.click_element(By.XPATH, "//button[contains(normalize-space(), 'Review') and not(contains(@class, 'disabled'))]")
+            # 4: Click Review & confirm (EN: "Review", FR: "Vérifiez")
+            self.click_element(By.XPATH, "//button[not(contains(@class, 'disabled')) and (contains(normalize-space(), 'Review') or contains(normalize-space(), 'Vérifiez'))]")
 
         else:
             # 2: Select a random available time
@@ -1409,17 +1415,20 @@ class Homeweb(BasePage):
             print(selected_time.text.strip())
             selected_time.click()
 
-            # 3: Wait for modality select to enable after time selection
-            self.wait.until(expected_conditions.element_to_be_clickable((By.ID, "appointmentModality")))
+            # 3: Wait for modality options to populate after time selection
+            self.wait.until(lambda d: len([
+                o for o in d.find_element(By.ID, "appointmentModality").find_elements(By.TAG_NAME, "option")
+                if o.get_attribute("value") not in ("0", "", None)
+            ]) > 0)
             modality_select = Select(self.driver.find_element(By.ID, "appointmentModality"))
-            modality_options = [o for o in modality_select.options if o.get_attribute("value") not in ("0", "")]
+            modality_options = [o for o in modality_select.options if o.get_attribute("value") not in ("0", "", None)]
             if modality_options:
                 selected_modality = random.choice(modality_options)
                 print(selected_modality.text.strip())
-                modality_select.select_by_visible_text(selected_modality.text.strip())
+                modality_select.select_by_value(selected_modality.get_attribute("value"))
 
-            # 4: Click Review & confirm
-            self.click_element(By.XPATH, "//button[contains(normalize-space(), 'Review') and not(contains(@class, 'disabled'))]")
+            # 4: Click Review & confirm (EN: "Review", FR: "Vérifiez")
+            self.click_element(By.XPATH, "//button[not(contains(@class, 'disabled')) and (contains(normalize-space(), 'Review') or contains(normalize-space(), 'Vérifiez'))]")
 
     def confirm_booking(self):
         if self.env in ("beta", "staging"):
