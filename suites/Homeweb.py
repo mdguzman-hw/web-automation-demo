@@ -675,11 +675,12 @@ class Homeweb(BasePage):
         return [AppointmentTile(tile) for tile in appointment_tiles]
 
     def get_dashboard_tiles(self):
-        # KNOWN ISSUE 2 (QCLIENT-768) — FR dashboard shows 6 tiles, EN shows 8 (Childcare & Eldercare LifestageCare tiles absent in FR)
-        expected = 6 if self.language == "fr" else 8
-        zone_length = str(expected)
-        selector = f"div.collection.collection-dashboard.zone-length-{zone_length} .item"
-        tile_elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+        # QCLIENT-768 resolved — FR now shows 8 tiles (same as EN)
+        expected = 8
+        container = self.wait.until(expected_conditions.presence_of_element_located(
+            (By.CSS_SELECTOR, "div.collection.collection-dashboard")
+        ))
+        tile_elements = container.find_elements(By.CSS_SELECTOR, ".item")
         tiles = []
 
         for tile in tile_elements:
@@ -688,7 +689,7 @@ class Homeweb(BasePage):
             link_text = tile.find_element(By.CSS_SELECTOR, ".item-content a.item-link").text.strip()
             tiles.append(DashboardTile(self.driver, self.wait, tile, title, href, link_text))
 
-        assert len(tiles) == expected, f"KNOWN ISSUE 2 (QCLIENT-768) | Expected {expected} dashboard tiles, got {len(tiles)}"
+        assert len(tiles) == expected, f"Expected {expected} dashboard tiles, got {len(tiles)}"
         return tiles
 
     def get_primary_categories(self):
