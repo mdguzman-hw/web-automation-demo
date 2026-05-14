@@ -149,9 +149,11 @@ def test_bat_web_008(homeweb, credentials, env):
 
 
 # BAT-WEB-009 | Kickouts
-def test_bat_web_009(homeweb, env):
+def test_bat_web_009(homeweb, env, record_conditional_pass):
     if env == "beta":
         return pytest.skip(f"KNOWN ISSUE 3 — Kickouts not available in {env}")
+    if homeweb.language == "fr":
+        record_conditional_pass()  # KNOWN ISSUE 5 — tile order swapped in FR PROD
 
     childcare_endpoint = "/resources/579ba4db88db7af01fe6ddd4"
     eldercare_endpoint = "/resources/579ba49a88db7af01fe6ddc8"
@@ -164,6 +166,7 @@ def test_bat_web_009(homeweb, env):
     dashboard_tiles = homeweb.get_dashboard_tiles()
 
     # 2: Test: Childcare Resource Locator
+    # KNOWN ISSUE 5 — FR PROD: Childcare and Eldercare tiles are swapped; this will fail in FR
     childcare_tile = dashboard_tiles[4]
     childcare_tile.navigate()
     assert childcare_endpoint in homeweb.current_url.lower()

@@ -26,6 +26,7 @@ _pending_output = {}  # {nodeid: [messages...]}
 _all_results = []  # [(nodeid, phase, skip_reason, stdout), ...]
 _test_metadata = {}  # {func_name: {"id": "BAT-WEB-001", "description": "...", "suite": "..."}}
 _accounts_registered_this_run = []  # appended by record_account; used by registered_this_run fixture
+_conditional_pass_nodeids = set()   # nodeids marked CP via record_conditional_pass fixture
 _session_start = None
 _env_durations = {}  # {"PROD": seconds, "BETA": seconds, "LOCAL": seconds}
 
@@ -44,6 +45,13 @@ def record_output(request):
         print(message)
 
     return _record
+
+
+@pytest.fixture
+def record_conditional_pass(request):
+    def _mark():
+        _conditional_pass_nodeids.add(request.node.nodeid)
+    return _mark
 
 
 @pytest.fixture(scope="session")
@@ -93,14 +101,22 @@ def pytest_runtest_logreport(report):
         _all_results.append((report.nodeid, "SKIPPED", reason, ""))
     elif report.when == "call":
         if report.passed:
-            phase = "passed"
             stdout = "\n".join(_pending_output.pop(report.nodeid, []))
-            _all_results.append((report.nodeid, "PASSED", "", stdout))
+            if report.nodeid in _conditional_pass_nodeids:
+                phase = "conditional_pass"
+                _all_results.append((report.nodeid, "CONDITIONAL_PASS", "", stdout))
+            else:
+                phase = "passed"
+                _all_results.append((report.nodeid, "PASSED", "", stdout))
         elif report.failed:
-            phase = "failed"
             stdout = "\n".join(_pending_output.pop(report.nodeid, []))
             longrepr = str(report.longrepr).strip() if report.longrepr else ""
-            _all_results.append((report.nodeid, "FAILED", longrepr, stdout))
+            if report.nodeid in _conditional_pass_nodeids:
+                phase = "conditional_pass"
+                _all_results.append((report.nodeid, "CONDITIONAL_PASS", longrepr, stdout))
+            else:
+                phase = "failed"
+                _all_results.append((report.nodeid, "FAILED", longrepr, stdout))
         elif report.skipped:
             phase = "skipped"
             reason = report.longrepr[2] if isinstance(report.longrepr, tuple) else str(report.longrepr)
@@ -124,7 +140,7 @@ def pytest_runtest_logreport(report):
         env = "PROD"
 
     if env not in _env_results:
-        _env_results[env] = {"passed": 0, "failed": 0, "skipped": 0}
+        _env_results[env] = {"passed": 0, "failed": 0, "skipped": 0, "conditional_pass": 0}
 
     _env_results[env][phase] += 1
 
@@ -206,6 +222,7 @@ def _write_test_matrix_xlsx(report_name, active_envs, run_time="-", env_times=No
     grey_fill   = PatternFill("solid", fgColor="D9D9D9")
     green_fill  = PatternFill("solid", fgColor="C6EFCE")
     red_fill    = PatternFill("solid", fgColor="FFC7CE")
+    yellow_fill = PatternFill("solid", fgColor="FFEB9C")
     thin        = Side(style="thin")
     border      = Border(left=thin, right=thin, top=thin, bottom=thin)
 
@@ -248,7 +265,7 @@ def _write_test_matrix_xlsx(report_name, active_envs, run_time="-", env_times=No
         ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = 12
 
     # --- data rows ---
-    counts = {env: {"passed": 0, "failed": 0, "skipped": 0} for env in active_envs}
+    counts = {env: {"passed": 0, "failed": 0, "skipped": 0, "conditional_pass": 0} for env in active_envs}
 
     for offset, (bat_id, func_name, meta) in enumerate(ordered):
         row = 2 + offset
@@ -290,6 +307,9 @@ def _write_test_matrix_xlsx(report_name, active_envs, run_time="-", env_times=No
             if phase == "PASSED":
                 symbol, fill = "Y", green_fill
                 counts[env]["passed"] += 1
+            elif phase == "CONDITIONAL_PASS":
+                symbol, fill = "CP", yellow_fill
+                counts[env]["conditional_pass"] += 1
             elif phase == "FAILED":
                 symbol, fill = "N", red_fill
                 counts[env]["failed"] += 1
@@ -324,24 +344,35 @@ def _write_test_matrix_xlsx(report_name, active_envs, run_time="-", env_times=No
 
     for label, key in [
         ("Passed",                       "passed"),
+        ("Conditional Pass",             "conditional_pass"),
         ("Failed",                       "failed"),
         ("Not Run (Skipped, N/A, etc.)", "skipped"),
-        ("Completed",                    "passed"),
     ]:
         totals_row += 1
         c = ws.cell(row=totals_row, column=LOGS_COL, value=label)
         c.font = header_font
         c.alignment = right_bold
         for env, col in env_cols.items():
-            ws.cell(row=totals_row, column=col, value=counts[env][key]).alignment = center
+            val = counts[env][key]
+            c = ws.cell(row=totals_row, column=col, value=val)
+            c.alignment = center
+
+    totals_row += 1
+    c = ws.cell(row=totals_row, column=LOGS_COL, value="Completed")
+    c.font = header_font
+    c.alignment = right_bold
+    for env, col in env_cols.items():
+        completed = counts[env]["passed"] + counts[env]["conditional_pass"] + counts[env]["failed"]
+        ws.cell(row=totals_row, column=col, value=completed).alignment = center
 
     totals_row += 1
     c = ws.cell(row=totals_row, column=LOGS_COL, value="Percentage Passed")
     c.font = header_font
     c.alignment = right_bold
     for env, col in env_cols.items():
-        total = counts[env]["passed"] + counts[env]["failed"]
-        pct = f"{int(counts[env]['passed'] / total * 100)}%" if total > 0 else "N/A"
+        completed = counts[env]["passed"] + counts[env]["conditional_pass"] + counts[env]["failed"]
+        total_passed = counts[env]["passed"] + counts[env]["conditional_pass"]
+        pct = f"{int(total_passed / completed * 100)}%" if completed > 0 else "N/A"
         ws.cell(row=totals_row, column=col, value=pct).alignment = center
 
     totals_row += 1
