@@ -29,6 +29,8 @@ _accounts_registered_this_run = []  # appended by record_account; used by regist
 _conditional_pass_nodeids = set()   # nodeids marked CP via record_conditional_pass fixture
 _session_start = None
 _env_durations = {}  # {"PROD": seconds, "BETA": seconds, "LOCAL": seconds}
+_device_info = "Unknown"
+_browser_info = "Unknown"
 
 
 def _pct(r):
@@ -320,27 +322,60 @@ def _write_test_matrix_xlsx(report_name, active_envs, run_time="-", env_times=No
             if fill:
                 c.fill = fill
 
-    # --- totals (labels in col C, counts in env cols) ---
+    # --- totals ---
     totals_row = 2 + len(ordered) + 1
 
-    # TOTALS header — env names in the result columns
-    c = ws.cell(row=totals_row, column=LOGS_COL, value="TOTALS")
-    c.font = header_font
-    c.alignment = right_bold
-    for env, col in env_cols.items():
-        ws.cell(row=totals_row, column=col, value=env).alignment = center
+    locale = os.getenv("LANGUAGE", "en").upper()
+    dt = datetime.strptime(_run_timestamp, "%Y%m%d_%H%M%S")
+    execution_date = dt.strftime("%B %-d %Y")
 
-    # Build row
+    totals_label_align = Alignment(horizontal="right", vertical="center")
+    totals_value_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    def totals_label(row, label):
+        c = ws.cell(row=row, column=LOGS_COL, value=label)
+        c.font = header_font
+        c.alignment = totals_label_align
+
+    # ENV row
+    totals_label(totals_row, "ENV")
+    _env_display = {"STAGING": "STG"}
+    for env, col in env_cols.items():
+        ws.cell(row=totals_row, column=col, value=_env_display.get(env, env)).alignment = totals_value_align
+
+    # BUILD row
     totals_row += 1
-    c = ws.cell(row=totals_row, column=LOGS_COL, value="Build")
-    c.font = header_font
-    c.alignment = right_bold
+    totals_label(totals_row, "BUILD")
     for env, col in env_cols.items():
         version_lines = "\n".join(f"{k}: {v}" for k, v in _versions.get(env, {}).items())
         c = ws.cell(row=totals_row, column=col, value=version_lines or "-")
-        c.alignment = left_wrap
+        c.alignment = totals_value_align
         if version_lines:
             ws.row_dimensions[totals_row].height = max(15, version_lines.count("\n") * 15 + 15)
+
+    # DEVICE row
+    totals_row += 1
+    totals_label(totals_row, "DEVICE")
+    for env, col in env_cols.items():
+        ws.cell(row=totals_row, column=col, value=_device_info).alignment = totals_value_align
+
+    # BROWSER row
+    totals_row += 1
+    totals_label(totals_row, "BROWSER")
+    for env, col in env_cols.items():
+        ws.cell(row=totals_row, column=col, value=_browser_info).alignment = totals_value_align
+
+    # LOCALE row
+    totals_row += 1
+    totals_label(totals_row, "LOCALE")
+    for env, col in env_cols.items():
+        ws.cell(row=totals_row, column=col, value=locale).alignment = totals_value_align
+
+    # EXECUTION DATE row
+    totals_row += 1
+    totals_label(totals_row, "EXECUTION DATE")
+    for env, col in env_cols.items():
+        ws.cell(row=totals_row, column=col, value=execution_date).alignment = totals_value_align
 
     for label, key in [
         ("Passed",                       "passed"),
@@ -349,39 +384,29 @@ def _write_test_matrix_xlsx(report_name, active_envs, run_time="-", env_times=No
         ("Not Run (Skipped, N/A, etc.)", "skipped"),
     ]:
         totals_row += 1
-        c = ws.cell(row=totals_row, column=LOGS_COL, value=label)
-        c.font = header_font
-        c.alignment = right_bold
+        totals_label(totals_row, label)
         for env, col in env_cols.items():
-            val = counts[env][key]
-            c = ws.cell(row=totals_row, column=col, value=val)
-            c.alignment = center
+            ws.cell(row=totals_row, column=col, value=counts[env][key]).alignment = totals_value_align
 
     totals_row += 1
-    c = ws.cell(row=totals_row, column=LOGS_COL, value="Completed")
-    c.font = header_font
-    c.alignment = right_bold
+    totals_label(totals_row, "Completed")
     for env, col in env_cols.items():
         completed = counts[env]["passed"] + counts[env]["conditional_pass"] + counts[env]["failed"]
-        ws.cell(row=totals_row, column=col, value=completed).alignment = center
+        ws.cell(row=totals_row, column=col, value=completed).alignment = totals_value_align
 
     totals_row += 1
-    c = ws.cell(row=totals_row, column=LOGS_COL, value="Percentage Passed")
-    c.font = header_font
-    c.alignment = right_bold
+    totals_label(totals_row, "Percentage Passed")
     for env, col in env_cols.items():
         completed = counts[env]["passed"] + counts[env]["conditional_pass"] + counts[env]["failed"]
         total_passed = counts[env]["passed"] + counts[env]["conditional_pass"]
         pct = f"{int(total_passed / completed * 100)}%" if completed > 0 else "N/A"
-        ws.cell(row=totals_row, column=col, value=pct).alignment = center
+        ws.cell(row=totals_row, column=col, value=pct).alignment = totals_value_align
 
     totals_row += 1
-    c = ws.cell(row=totals_row, column=LOGS_COL, value=f"Run Time  ({run_time} total)")
-    c.font = header_font
-    c.alignment = right_bold
+    totals_label(totals_row, f"Run Time  ({run_time} total)")
     if env_times:
         for env, col in env_cols.items():
-            ws.cell(row=totals_row, column=col, value=env_times.get(env, "-")).alignment = center
+            ws.cell(row=totals_row, column=col, value=env_times.get(env, "-")).alignment = totals_value_align
     else:
         first_env_col = min(env_cols.values())
         ws.cell(row=totals_row, column=first_env_col, value=run_time).alignment = center
@@ -392,9 +417,18 @@ def _write_test_matrix_xlsx(report_name, active_envs, run_time="-", env_times=No
 
 
 def pytest_sessionstart(session):
-    global _session_start
+    global _session_start, _device_info
     import time
+    import subprocess
     _session_start = time.monotonic()
+    try:
+        name    = subprocess.check_output(["sw_vers", "-productName"],    text=True).strip()
+        version = subprocess.check_output(["sw_vers", "-productVersion"], text=True).strip()
+        build   = subprocess.check_output(["sw_vers", "-buildVersion"],   text=True).strip()
+        _device_info = f"{name} {version} ({build})"
+    except Exception:
+        import platform
+        _device_info = platform.platform()
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
@@ -479,6 +513,13 @@ def driver(request, env):
 
     # 2: Launch Browser
     driver_instance = webdriver.Chrome(options=chrome_options)
+
+    global _browser_info
+    if _browser_info == "Unknown":
+        try:
+            _browser_info = "Chrome Version " + driver_instance.capabilities.get("browserVersion", "Unknown")
+        except Exception:
+            pass
 
     # 3. YIELD - give driver to the tests
     yield driver_instance
