@@ -221,9 +221,9 @@ def test_bat_web_010(homeweb):
     homeweb.click_element(By.CSS_SELECTOR, "[data-bs-toggle=\"modal\"]")
     assert homeweb.wait_for_modal()
 
-    # 3: Test - Dismiss modal, display course content
-    homeweb.click_element(By.CSS_SELECTOR, "[data-bs-dismiss=\"modal\"]")
-    assert homeweb.wait_for_course_content()
+    # 3: Test - Accept consent modal, display course content
+    homeweb.click_element(By.CSS_SELECTOR, ".modal-content .btn-primary")
+    assert homeweb.wait_for_course_content_prod()
 
     # 4: Test - Menu dropdown
     header.click_element(By.CLASS_NAME, header_buttons["menu"])

@@ -373,6 +373,9 @@ class Homeweb(BasePage):
         )
 
     def wait_for_course_content(self):
+        from selenium.webdriver.support.ui import WebDriverWait
+        course_wait = WebDriverWait(self.driver, 60)
+
         # 1: Locate embed container
         self.wait.until(
             expected_conditions.visibility_of_element_located((By.CLASS_NAME, "iframeWrapper"))
@@ -384,11 +387,11 @@ class Homeweb(BasePage):
         )
         self.driver.switch_to.frame(iframe)
 
-        # 3: Wait for main slide to appear inside iframe
-        self.wait.until(expected_conditions.visibility_of_element_located((By.ID, "div_Slide")))
+        # 3: Wait for main slide to appear inside iframe (S3-hosted content can be slow on PROD)
+        course_wait.until(expected_conditions.visibility_of_element_located((By.ID, "div_Slide")))
 
         # 4: Wait until all immediate child elements of the slide are visible
-        self.wait.until(lambda d: d.execute_script("""
+        course_wait.until(lambda d: d.execute_script("""
                 const slide = document.getElementById('div_Slide');
                 if (!slide) return false;
                 return Array.from(slide.children).some(c => {
@@ -402,10 +405,42 @@ class Homeweb(BasePage):
             """))
 
         # 5: Additional check to user interaction is permitted
-        self.wait.until(
+        course_wait.until(
             expected_conditions.invisibility_of_element_located(
                 (By.CSS_SELECTOR, "#blockUserInteraction.loadingBackground")
             )
+        )
+
+        # 6: Switch back to main content
+        self.driver.switch_to.default_content()
+        return True
+
+    def wait_for_course_content_prod(self):
+        from selenium.webdriver.support.ui import WebDriverWait
+        course_wait = WebDriverWait(self.driver, 60)
+
+        # 1: Locate embed container
+        self.wait.until(
+            expected_conditions.visibility_of_element_located((By.CLASS_NAME, "iframeWrapper"))
+        )
+
+        # 2: Locate and switch to iframe content
+        iframe = self.wait.until(
+            expected_conditions.presence_of_element_located((By.TAG_NAME, "iframe"))
+        )
+        self.driver.switch_to.frame(iframe)
+
+        # 3: Wait for course player to load (mobile start overlay with play button)
+        course_wait.until(
+            expected_conditions.visibility_of_element_located((By.ID, "mobile-start-button"))
+        )
+
+        # 4: Click the play button to start the course
+        self.driver.find_element(By.ID, "mobile-start-button").click()
+
+        # 5: Wait for slide loader to dismiss (hide-slide-loader class on #preso confirms content rendered)
+        course_wait.until(
+            lambda d: "hide-slide-loader" in d.find_element(By.ID, "preso").get_attribute("class")
         )
 
         # 6: Switch back to main content
