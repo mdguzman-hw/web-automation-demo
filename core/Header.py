@@ -77,6 +77,36 @@ class HeaderHomeweb:
     }
 
 
+class HeaderHomeweb_New:
+    EN = {
+        "elements": {
+            "buttons": {
+                "menu": "nav-account-toggle",
+                "sign_out": "[aria-label=\"Sign out\"]",
+                "dashboard": "a[href*='/homeweb/dashboard']",
+                "library": "a.topbar-navlink[href*='/resources']",
+                "messages": "a.topbar-navlink[href*='/messages']",
+            }
+        },
+        "paths": {
+        }
+    }
+
+    FR = {
+        "elements": {
+            "buttons": {
+                "menu": "nav-account-toggle",
+                "sign_out": "[aria-label=\"Se déconnecter\"]",
+                "dashboard": "a[href*='/homeweb/dashboard']",
+                "library": "a.topbar-navlink[href*='/resources']",
+                "messages": "a.topbar-navlink[href*='/messages']",
+            }
+        },
+        "paths": {
+        }
+    }
+
+
 class HeaderCustomerPortal:
     EN = {
         "elements": {
@@ -183,6 +213,7 @@ class HeaderSentioProvider:
 class Header(BasePage):
     DOMAIN_MAP = {
         "homeweb": {"AUTH": HeaderHomeweb, "ANON": HeaderAnon},
+        "homeweb_new": {"AUTH": HeaderHomeweb_New, "ANON": HeaderAnon},
         "customer_portal": {"AUTH": HeaderCustomerPortal, "ANON": HeaderAnon},
         "quantum_api": {"AUTH": HeaderQuantumApi, "ANON": HeaderAnonApi},
         "sentio_beta_client": {"AUTH": HeaderSentioClient, "ANON": HeaderAnon},
