@@ -58,6 +58,8 @@ from selenium.webdriver.common.by import By
 
 # BAT-WEB-001 | Navigate Homeweb
 def test_bat_web_001(homeweb, quantum, env, record_version):
+    homeweb.use_new_nav()
+
     # 1: Test - Check versions
     suffix = " - Beta" if env == "beta" else ""
     record_version(f"Homeweb{suffix}", homeweb.base_url, env)
@@ -317,7 +319,7 @@ def test_bat_web_011(homeweb):
 
 # BAT-WEB-012 | Kickouts
 def test_bat_web_012(homeweb, env, record_output):
-    pytest.skip("Skipping -> HRA kickout | KNOWN ISSUE")
+    pytest.skip("KNOWN ISSUE 4 — HRA kickout not functional")
     assert homeweb.wait_for_resources()
 
     is_fr = homeweb.language == "fr"
@@ -338,7 +340,7 @@ def test_bat_web_012(homeweb, env, record_output):
         if transfer_type == "lifestage":
             assert homeweb.wait_for_lifestage_transfer(), f"LIFESTAGE TRANSFER FAILED: '{search_term}'"
         else:
-            # KNOWN ISSUE
+            # KNOWN ISSUE 4
             assert homeweb.wait_for_lifestyle_transfer(), f"LIFESTYLE TRANSFER FAILED: '{search_term}'"
 
         record_output(f"Kickout | '{search_term}' | {transfer_type} transfer confirmed")
@@ -547,189 +549,197 @@ def test_bat_web_022(homeweb, record_output):
     homeweb.take_screenshot("scenario6", logger=record_output)
 
 
-# # BAT-WEB-023 | End Service [DSGDEMO-S3]
-# def test_bat_web_023(homeweb, credentials, record_output, update_account_dashboard):
-#     # 1: Test - Sign In - Header
-#     homeweb.navigate_landing()
-#     homeweb.navigate_sign_in()
-#
-#     # 2: Test - Login - Homeweb - DSGDEMO
-#     quantum = homeweb.quantum
-#     email = credentials["mdg_test"]["email"]
-#     password = credentials["mdg_test"]["password"]
-#     quantum.login(email, password)
-#     record_output(f"Login | Email: {email}")
-#     assert homeweb.wait_for_dashboard(), \
-#         f"DASHBOARD NOT LOADED: '{homeweb.current_url}'"
-#     homeweb.navigate_dashboard()
-#
-#     # 1: Assert S3 dashboard (active session required)
-#     dashboard_state = homeweb.get_dashboard_state()
-#     assert dashboard_state == "S3", \
-#         f"EXPECTED: Dashboard S3 | ACTUAL: {dashboard_state} (no active session to end)"
-#
-#     # 2: Quick Access — scroll to Sessions
-#     homeweb.navigate_sessions()
-#
-#     # 3: Assert at least one active scheduled session
-#     homeweb.assert_active_session()
-#
-#     # 4: Click View Details -> /homeweb/appointment
-#     homeweb.click_view_details()
-#     assert homeweb.wait_for_appointment_page()
-#     record_output(f"Appointment page: {homeweb.current_url}")
-#
-#     # 5: Click 'end services' link in Modify section -> /homeweb/services/end
-#     homeweb.click_end_services_link()
-#
-#     # 6: Confirmation page — click Yes
-#     assert homeweb.wait_for_end_service_confirmation()
-#     homeweb.confirm_end_service()
-#
-#     # 7: Survey — select random reason (auto-navigates to dashboard)
-#     homeweb.complete_end_service_survey()
-#
-#     # 8: Assert S2 — service still active, no sessions
-#     assert homeweb.wait_for_dashboard()
-#     dashboard_state = homeweb.get_dashboard_state()
-#     assert dashboard_state == "S2", \
-#         f"EXPECTED: Dashboard S2 after ending service | ACTUAL: {dashboard_state}"
-#     record_output(f"Dashboard state after end service: {dashboard_state}")
-#
-#     # 9: Navigate to Journey via header
-#     homeweb.navigate_journey()
-#     assert homeweb.wait_for_journey()
-#
-#     # 10: Filter by Open plans
-#     homeweb.filter_journey_plans("CASE_OPEN")
-#
-#     # 11: Assert no open plans — confirms service/plan is now closed
-#     assert homeweb.assert_no_plans_match_filter()
-#     record_output("Journey: No open plans confirmed — service ended successfully")
-#
-#     # 12: Re-book — SCN Scenario 2 -> Professional Support & Sentio
-#     homeweb.navigate_dashboard()
-#     homeweb.navigate_scn_assessment()
-#     record_output("Smart Care Navigation launched")
-#     homeweb.complete_assessment(logger=record_output)
-#     assert homeweb.is_assessment_complete()
-#     homeweb.assert_recommendation_scenario_2()
-#     homeweb.take_screenshot("023_scenario2", logger=record_output)
-#
-#     # 13: Create Booking
-#     homeweb.get_started()
-#     assert homeweb.wait_for_book_for()
-#     homeweb.complete_book_for(0)
-#     assert homeweb.wait_for_booking_create()
-#     email = credentials["dsgdemo_s3"]["email"]
-#     homeweb.complete_booking_contact_form(
-#         email=email,
-#         phone="1234567890",
-#         address_type="Work",
-#         street_address="1234567 Homewood Ave",
-#         postal_code="T2X 6V7",
-#         message_permission="1",
-#         province="Ontario",
-#         city="Guelph",
-#     )
-#     assert homeweb.wait_for_provider_matching()
-#     homeweb.select_first_available_provider()
-#     assert homeweb.wait_for_booking_details()
-#     homeweb.select_booking_options()
-#     assert homeweb.wait_for_booking_confirm()
-#     homeweb.confirm_booking()
-#
-#     # 14: Assert S3 restored
-#     homeweb.navigate_dashboard()
-#     dashboard_state = homeweb.get_dashboard_state()
-#     assert dashboard_state == "S3", \
-#         f"EXPECTED: Dashboard S3 after re-booking | ACTUAL: {dashboard_state}"
-#     update_account_dashboard("S3")
-#     record_output(f"Re-booking complete — Dashboard: {dashboard_state}")
+# BAT-WEB-023 | End Service [MDG_TEST]
+def test_bat_web_023(homeweb, credentials, record_output, update_account_dashboard):
+    pytest.skip("WIP->End Service")
+
+    # TODO: When wiring 020–024 together on a single S3 account, remove steps 1–3
+    #       and replace with: assert homeweb.is_authenticated()
+
+    # 1: Test - Sign In - Header
+    homeweb.navigate_landing()
+    homeweb.navigate_sign_in()
+
+    # 2: Test - Login
+    quantum = homeweb.quantum
+    email = credentials["mdg_test"]["email"]
+    password = credentials["mdg_test"]["password"]
+    quantum.login(email, password)
+    record_output(f"Login | Email: {email}")
+    assert homeweb.wait_for_dashboard(), \
+        f"DASHBOARD NOT LOADED: '{homeweb.current_url}'"
+    homeweb.navigate_dashboard()
+
+    # 3: Assert S3 dashboard (active session required)
+    dashboard_state = homeweb.get_dashboard_state()
+    assert dashboard_state == "S3", \
+        f"EXPECTED: Dashboard S3 | ACTUAL: {dashboard_state} (no active session to end)"
+
+    # 4: Quick Access — scroll to Sessions
+    homeweb.navigate_sessions()
+
+    # 5: Assert at least one active scheduled session
+    homeweb.assert_active_session()
+
+    # 6: Click View Details -> /homeweb/appointment
+    homeweb.click_view_details()
+    assert homeweb.wait_for_appointment_page()
+    record_output(f"Appointment page: {homeweb.current_url}")
+
+    # 7: Click 'end services' link in Modify section -> /homeweb/services/end
+    homeweb.click_end_services_link()
+
+    # 8: Confirmation page — click Yes
+    assert homeweb.wait_for_end_service_confirmation()
+    homeweb.confirm_end_service()
+
+    # 9: Survey — select random reason (auto-navigates to dashboard)
+    homeweb.complete_end_service_survey()
+
+    # 10: Assert S2 — service ended, no active sessions
+    assert homeweb.wait_for_dashboard()
+    dashboard_state = homeweb.get_dashboard_state()
+    assert dashboard_state == "S2", \
+        f"EXPECTED: Dashboard S2 after ending service | ACTUAL: {dashboard_state}"
+    record_output(f"Dashboard state after end service: {dashboard_state}")
+
+    # 11: Navigate to Journey via header
+    homeweb.navigate_journey()
+    assert homeweb.wait_for_journey()
+
+    # 12: Filter by Open plans
+    homeweb.filter_journey_plans("CASE_OPEN")
+
+    # 13: Assert no open plans — confirms service/plan is now closed
+    assert homeweb.assert_no_plans_match_filter()
+    record_output("Journey: No open plans confirmed — service ended successfully")
+
+    # 14: Re-book — SCN Scenario 2 -> Professional Support & Sentio
+    homeweb.navigate_dashboard()
+    homeweb.navigate_scn_assessment()
+    record_output("Smart Care Navigation launched")
+    homeweb.complete_assessment(logger=record_output)
+    assert homeweb.is_assessment_complete()
+    homeweb.assert_recommendation_scenario_2()
+    homeweb.take_screenshot("023_scenario2", logger=record_output)
+
+    # 15: Create Booking
+    homeweb.get_started()
+    assert homeweb.wait_for_book_for()
+    homeweb.complete_book_for(0)
+    assert homeweb.wait_for_booking_create()
+    homeweb.complete_booking_contact_form(
+        email=email,
+        phone="1234567890",
+        address_type="Work",
+        street_address="1234567 Homewood Ave",
+        postal_code="T2X 6V7",
+        message_permission="1",
+        province="Ontario",
+        city="Guelph",
+    )
+    assert homeweb.wait_for_provider_matching()
+    homeweb.select_first_available_provider()
+    assert homeweb.wait_for_booking_details()
+    homeweb.select_booking_options()
+    assert homeweb.wait_for_booking_confirm()
+    homeweb.confirm_booking()
+
+    # 16: Assert S3 restored
+    homeweb.navigate_dashboard()
+    dashboard_state = homeweb.get_dashboard_state()
+    assert dashboard_state == "S3", \
+        f"EXPECTED: Dashboard S3 after re-booking | ACTUAL: {dashboard_state}"
+    update_account_dashboard("S3")
+    record_output(f"Re-booking complete — Dashboard: {dashboard_state}")
 
 
-# # BAT-WEB-024 | Cancel Appointment [DSGDEMO-S3]
-# def test_bat_web_024(homeweb, credentials, record_output, update_account_dashboard):
-#     homeweb.navigate_dashboard()
-#
-#     # 1: Assert S3 — note Appointment ID
-#     dashboard_state = homeweb.get_dashboard_state()
-#     assert dashboard_state == "S3", \
-#         f"EXPECTED: Dashboard S3 | ACTUAL: {dashboard_state} (no active session to cancel)"
-#     appointment_id = homeweb.get_active_appointment_id()
-#     record_output(f"Active Appointment ID: {appointment_id}")
-#
-#     # 2: Journey → Plans → filter Open → note Plan ID
-#     homeweb.navigate_journey()
-#     assert homeweb.wait_for_journey()
-#     homeweb.filter_journey_plans("CASE_OPEN")
-#     plan_id = homeweb.get_open_plan_id()
-#     record_output(f"Open Plan ID: {plan_id}")
-#
-#     # 3: Journey → Sessions tab → filter Scheduled
-#     homeweb.navigate_journey_sessions()
-#     homeweb.filter_journey_sessions("SCHEDULED")
-#
-#     # 4: Click View Details on matching appointment
-#     homeweb.click_session_view_details(appointment_id)
-#     assert homeweb.wait_for_appointment_page()
-#
-#     # 5: Click Cancel → "Are you sure?" section appears
-#     homeweb.click_cancel_appointment_btn()
-#
-#     # 6: Click "Yes, Cancel Appointment" → /homeweb/booking/cancel
-#     homeweb.click_yes_cancel_appointment()
-#
-#     # 7: Confirm cancellation → navigates to dashboard
-#     homeweb.confirm_cancel_appointment()
-#
-#     # 8: Assert S2 — service still active, appointment cancelled
-#     assert homeweb.wait_for_dashboard()
-#     dashboard_state = homeweb.get_dashboard_state()
-#     assert dashboard_state == "S2", \
-#         f"EXPECTED: Dashboard S2 after cancel | ACTUAL: {dashboard_state}"
-#     record_output(f"Dashboard after cancel: {dashboard_state}")
-#
-#     # 9: Journey → Plans → filter Open → confirm Plan ID still exists (service not ended)
-#     homeweb.navigate_journey()
-#     assert homeweb.wait_for_journey()
-#     homeweb.filter_journey_plans("CASE_OPEN")
-#     assert homeweb.assert_plan_id_exists(plan_id)
-#     record_output(f"Plan ID {plan_id} confirmed — service still active after appointment cancel")
-#
-#     # 10: Re-book — Get Started from open plan card (no SCN assessment)
-#     homeweb.get_started_from_journey()
-#     assert homeweb.wait_for_provider_matching()
-#     homeweb.select_first_available_provider()
-#     assert homeweb.wait_for_booking_details()
-#     homeweb.select_booking_options()
-#     assert homeweb.wait_for_booking_confirm()
-#     homeweb.confirm_booking()
-#
-#     # 11: Assert S3 restored
-#     homeweb.navigate_dashboard()
-#     dashboard_state = homeweb.get_dashboard_state()
-#     assert dashboard_state == "S3", \
-#         f"EXPECTED: Dashboard S3 after re-booking | ACTUAL: {dashboard_state}"
-#     update_account_dashboard("S3")
-#     record_output(f"Re-booking complete — Dashboard: {dashboard_state}")
+# BAT-WEB-024 | Cancel Appointment [MDG_TEST]
+def test_bat_web_024(homeweb, credentials, record_output, update_account_dashboard):
+    pytest.skip("WIP->Cancel Appointment")
 
-# # BAT-WEB-025 | Update Profile [DSGDEMO-S3]
-# def test_bat_web_025(homeweb, record_output):
-#     pytest.skip("WIP->Update Profile")
-#
-#
-# # BAT-WEB-026 | Discover [DSGDEMO-S3]
-# def test_bat_web_026(homeweb, record_output):
-#     pytest.skip("WIP->Discover")
-#
-#
-# # BAT-WEB-027 | Journey [DSGDEMO-S3]
-# def test_bat_web_027(homeweb, record_output):
-#     pytest.skip("WIP->Journey")
-#
-#
-# BAT-WEB-026 | Navigate to Messages
+    # TODO: When wiring 020–024 together on a single S3 account, confirm this flows
+    #       directly from 023 (mdg_test already logged in at S3 after re-booking)
+    homeweb.navigate_dashboard()
+
+    # 1: Assert S3 — note Appointment ID
+    dashboard_state = homeweb.get_dashboard_state()
+    assert dashboard_state == "S3", \
+        f"EXPECTED: Dashboard S3 | ACTUAL: {dashboard_state} (no active session to cancel)"
+    appointment_id = homeweb.get_active_appointment_id()
+    record_output(f"Active Appointment ID: {appointment_id}")
+
+    # 2: Journey → Plans → filter Open → note Plan ID
+    homeweb.navigate_journey()
+    assert homeweb.wait_for_journey()
+    homeweb.filter_journey_plans("CASE_OPEN")
+    plan_id = homeweb.get_open_plan_id()
+    record_output(f"Open Plan ID: {plan_id}")
+
+    # 3: Journey → Sessions tab → filter Scheduled
+    homeweb.navigate_journey_sessions()
+    homeweb.filter_journey_sessions("SCHEDULED")
+
+    # 4: Click View Details on matching appointment
+    homeweb.click_session_view_details(appointment_id)
+    assert homeweb.wait_for_appointment_page()
+
+    # 5: Click Cancel → "Are you sure?" section appears
+    homeweb.click_cancel_appointment_btn()
+
+    # 6: Click "Yes, Cancel Appointment" → /homeweb/booking/cancel
+    homeweb.click_yes_cancel_appointment()
+
+    # 7: Confirm cancellation → navigates to dashboard
+    homeweb.confirm_cancel_appointment()
+
+    # 8: Assert S2 — service still active, appointment cancelled
+    assert homeweb.wait_for_dashboard()
+    dashboard_state = homeweb.get_dashboard_state()
+    assert dashboard_state == "S2", \
+        f"EXPECTED: Dashboard S2 after cancel | ACTUAL: {dashboard_state}"
+    record_output(f"Dashboard after cancel: {dashboard_state}")
+
+    # 9: Journey → Plans → filter Open → confirm Plan ID still exists (service not ended)
+    homeweb.navigate_journey()
+    assert homeweb.wait_for_journey()
+    homeweb.filter_journey_plans("CASE_OPEN")
+    assert homeweb.assert_plan_id_exists(plan_id)
+    record_output(f"Plan ID {plan_id} confirmed — service still active after appointment cancel")
+
+    # 10: Re-book — Get Started from open plan card (no SCN assessment)
+    homeweb.get_started_from_journey()
+    assert homeweb.wait_for_provider_matching()
+    homeweb.select_first_available_provider()
+    assert homeweb.wait_for_booking_details()
+    homeweb.select_booking_options()
+    assert homeweb.wait_for_booking_confirm()
+    homeweb.confirm_booking()
+
+    # 11: Assert S3 restored
+    homeweb.navigate_dashboard()
+    dashboard_state = homeweb.get_dashboard_state()
+    assert dashboard_state == "S3", \
+        f"EXPECTED: Dashboard S3 after re-booking | ACTUAL: {dashboard_state}"
+    update_account_dashboard("S3")
+    record_output(f"Re-booking complete — Dashboard: {dashboard_state}")
+
+# BAT-WEB-025 | Update Profile [DSGDEMO-S3]
+def test_bat_web_025(homeweb, record_output):
+    pytest.skip("WIP->Update Profile")
+
+
+# BAT-WEB-026 | Discover [DSGDEMO-S3]
+def test_bat_web_026(homeweb, record_output):
+    pytest.skip("WIP->Discover")
+
+
+# BAT-WEB-027 | Journey [DSGDEMO-S3]
+def test_bat_web_027(homeweb, record_output):
+    pytest.skip("WIP->Journey")
+
+
+# BAT-WEB-028 | Navigate to Messages
 def test_bat_web_028(homeweb):
     assert homeweb.is_authenticated()
 
@@ -738,7 +748,7 @@ def test_bat_web_028(homeweb):
 
     homeweb.logout()
 
-# BAT-WEB-027 | Embedded - Mobile Resources
+# BAT-WEB-029 | Embedded - Mobile Resources
 def test_bat_web_029(homeweb):
     lang_prefix = f"/{homeweb.language}" if homeweb.language == "fr" else ""
     resource_1_target = homeweb.base_url + lang_prefix + "/summertime-and-your-health?embedded"
