@@ -47,13 +47,18 @@ class Homeweb(BasePage):
         self.public = Public.EN if language == "en" else Public.FR
         self._is_authenticated = False
         self._is_landing = False
+        self._header_domain = "homeweb"
         self.header = None
         self.update_header()
 
     # Methods
     def update_header(self):
         user_type = "AUTH" if self._is_authenticated else "ANON"
-        self.header = Header(self.driver, domain="homeweb", language=self.language, user=user_type)
+        self.header = Header(self.driver, domain=self._header_domain, language=self.language, user=user_type)
+
+    def use_new_nav(self):
+        self._header_domain = "homeweb_new"
+        self.update_header()
 
     def navigate_landing(self, custom=None):
         if custom:
