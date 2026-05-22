@@ -2,7 +2,7 @@
 
 import os
 import time
-from selenium.common.exceptions import StaleElementReferenceException
+from selenium.common.exceptions import StaleElementReferenceException, ElementClickInterceptedException
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.wait import WebDriverWait
 
@@ -14,35 +14,23 @@ class BasePage:
         self.language = language
 
     def click_element(self, by, locator):
-        # 1: Find element
-        element = self.wait.until(
-            expected_conditions.presence_of_element_located((by, locator))
-        )
-
-        # 2: Scroll element into view
-        self.driver.execute_script(
-            "arguments[0].scrollIntoView({block: 'center'});", element
-        )
-
-        # 3: Wait for layout to stabilize; re-fetch on stale reference
-        def is_stable(d):
-            nonlocal element
+        for attempt in range(3):
             try:
-                return element.is_displayed() and element.is_enabled()
-            except StaleElementReferenceException:
-                element = d.find_element(by, locator)
-                return False
-
-        self.wait.until(is_stable)
-
-        # 4: Small pause to allow any final reflows
-        time.sleep(0.5)
-        clickable_element = self.wait.until(
-            expected_conditions.element_to_be_clickable((by, locator))
-        )
-
-        # 5: Click element
-        clickable_element.click()
+                element = self.wait.until(
+                    expected_conditions.presence_of_element_located((by, locator))
+                )
+                self.driver.execute_script(
+                    "arguments[0].scrollIntoView({block: 'center'});", element
+                )
+                time.sleep(0.5)
+                self.wait.until(
+                    expected_conditions.element_to_be_clickable((by, locator))
+                ).click()
+                return
+            except (StaleElementReferenceException, ElementClickInterceptedException):
+                if attempt == 2:
+                    raise
+                time.sleep(0.3)
 
     def take_screenshot(self, name, logger=None):
         from conftest import _run_timestamp, _reports_dir
