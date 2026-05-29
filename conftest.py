@@ -411,7 +411,7 @@ def _write_test_matrix_xlsx(report_name, active_envs, run_time="-", env_times=No
         first_env_col = min(env_cols.values())
         ws.cell(row=totals_row, column=first_env_col, value=run_time).alignment = center
 
-    path = f"{_reports_dir}/{_run_timestamp}_{report_name}_report.xlsx"
+    path = f"{_reports_dir}/{_run_timestamp}_{report_name}_{locale}_report.xlsx"
     wb.save(path)
     return path
 
