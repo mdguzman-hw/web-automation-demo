@@ -16,7 +16,7 @@ def test_bat_web_024(quantum, customer_portal, credentials, env, record_version)
     assert quantum.base_url in quantum.current_url.lower()
 
     # 2: Test - Login - Customer Portal - Personal
-    quantum.login(credentials["personal"]["email"], credentials["personal"]["password"])
+    quantum.login(credentials["hhi_personal"]["email"], credentials["hhi_personal"]["password"])
     assert customer_portal.wait_for_portal_login()
     customer_portal.set_authenticated(True)
 
