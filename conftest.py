@@ -19,7 +19,8 @@ from suites.SentioProvider import SentioProvider
 
 _run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 _date_str = _run_timestamp[4:6] + "-" + _run_timestamp[6:8] + "-" + _run_timestamp[:4]
-_reports_dir = f"reports/{_date_str}/{_run_timestamp}"
+_run_locale = os.getenv("LANGUAGE", "en").upper()
+_reports_dir = f"reports/{_date_str}/{_run_timestamp}_{_run_locale}"
 _env_results = {}
 _versions = {}  # {"PROD": {"Homeweb": "v3.0.17.261", ...}, "BETA": {...}}
 _pending_output = {}  # {nodeid: [messages...]}
@@ -325,7 +326,7 @@ def _write_test_matrix_xlsx(report_name, active_envs, run_time="-", env_times=No
     # --- totals ---
     totals_row = 2 + len(ordered) + 1
 
-    locale = os.getenv("LANGUAGE", "en").upper()
+    locale = _run_locale
     dt = datetime.strptime(_run_timestamp, "%Y%m%d_%H%M%S")
     execution_date = dt.strftime("%B %-d %Y")
 
