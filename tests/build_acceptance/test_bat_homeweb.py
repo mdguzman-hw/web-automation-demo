@@ -555,28 +555,34 @@ def test_bat_web_022(homeweb):
     assert homeweb.wait_for_logout()
 
 
-# BAT-WEB-023 | Mobile - Embedded resources
-def test_bat_web_023(homeweb):
+# BAT-WEB-023a | Mobile - Embedded Resource 1
+def test_bat_web_023a(homeweb):
     # KNOWN ISSUE 1 - Workaround: Manually navigate back to landing (locale-aware)
     homeweb.navigate_landing()
     assert homeweb.is_landing()
     lang_prefix = "" if homeweb.language.lower() == "en" else f"/{homeweb.language}"
-
-    resource_1_target = homeweb.base_url + lang_prefix + "/summertime-and-your-health?embedded"
-    resource_2_target = homeweb.base_url + lang_prefix + "/mental-health-benefits-of-exercise?embedded"
-    resource_3_target = homeweb.base_url + lang_prefix + "/summer-beauty-from-the-inside-out?embedded"
-
-    # 1: Test - Embedded Resource - 1
-    homeweb.driver.get(resource_1_target)
+    target = homeweb.base_url + lang_prefix + "/summertime-and-your-health?embedded"
+    expected = f"/{homeweb.language}/homewood/summertime-your-health" if homeweb.language.lower() == "en" else f"/{homeweb.language}/homewood/lete-et-votre-sante"
+    homeweb.driver.get(target)
+    assert expected in homeweb.current_url
     assert homeweb.wait_for_resource_content()
-    homeweb.go_back()
 
-    # 2: Test - Embedded Resource - 2
-    homeweb.driver.get(resource_2_target)
-    assert homeweb.wait_for_resource_content()
-    homeweb.go_back()
 
-    # 3: Test - Embedded Resource - 3
-    homeweb.driver.get(resource_3_target)
+# BAT-WEB-023b | Mobile - Embedded Resource 2
+def test_bat_web_023b(homeweb):
+    lang_prefix = "" if homeweb.language.lower() == "en" else f"/{homeweb.language}"
+    target = homeweb.base_url + lang_prefix + "/mental-health-benefits-of-exercise?embedded"
+    expected = f"/{homeweb.language}/homewood/mental-health-benefits-exercise" if homeweb.language.lower() == "en" else f"/{homeweb.language}/homewood/les-bienfaits-de-lexercice-pour-la-sante-mentale"
+    homeweb.driver.get(target)
+    assert expected in homeweb.current_url
     assert homeweb.wait_for_resource_content()
-    homeweb.go_back()
+
+
+# BAT-WEB-023c | Mobile - Embedded Resource 3
+def test_bat_web_023c(homeweb):
+    lang_prefix = "" if homeweb.language.lower() == "en" else f"/{homeweb.language}"
+    target = homeweb.base_url + lang_prefix + "/summer-beauty-from-the-inside-out?embedded"
+    expected = f"/{homeweb.language}/homewood/summer-beauty-from-inside-out" if homeweb.language.lower() == "en" else f"/{homeweb.language}/homewood/comment-laisser-resplendir-sa-beaute-en-ete"
+    homeweb.driver.get(target)
+    assert expected in homeweb.current_url
+    assert homeweb.wait_for_resource_content()
